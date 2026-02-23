@@ -298,9 +298,21 @@ function mergeAdjustments(
 
 export async function seedDatabase() {
   const existingSectors = await db.select().from(riskSectors);
-  if (existingSectors.length > 0) {
-    console.log("Database already seeded, skipping...");
+  const existingNews = await db.select().from(marketNews);
+  const needsReseed = existingNews.length !== 20;
+
+  if (existingSectors.length > 0 && !needsReseed) {
+    console.log("Database already seeded with current data, skipping...");
     return;
+  }
+
+  if (needsReseed && existingSectors.length > 0) {
+    console.log("Stale data detected (news count mismatch). Reseeding...");
+    await db.delete(marketNews);
+    await db.delete(riskAlerts);
+    await db.delete(heatmapData);
+    await db.delete(riskMetrics);
+    await db.delete(riskSectors);
   }
 
   console.log("Seeding database with scoring algorithm from all data sources...");
