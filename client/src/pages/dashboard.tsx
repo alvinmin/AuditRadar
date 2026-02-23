@@ -37,7 +37,7 @@ export default function Dashboard() {
     trend: h.trend,
   }));
 
-  const summaryMetrics = buildSummaryMetrics(metrics, news);
+  const summaryMetrics = buildSummaryMetrics(metrics);
   const selectedSectorObj = sectors.find((s) => s.id === selectedSector);
 
   return (
@@ -84,25 +84,13 @@ export default function Dashboard() {
   );
 }
 
-function buildSummaryMetrics(metrics: RiskMetric[], news: MarketNews[]) {
+function buildSummaryMetrics(metrics: RiskMetric[]) {
   const avgScore = metrics.length > 0
     ? metrics.reduce((sum, m) => sum + m.score, 0) / metrics.length
     : 0;
 
-  const avgPredicted = metrics.length > 0
-    ? metrics.reduce((sum, m) => sum + (m.predictedScore ?? m.score), 0) / metrics.length
-    : 0;
-
-  const negativeCount = news.filter(n => n.sentiment === "Negative").length;
-  const totalNews = news.length || 1;
-  const negativeRatio = (negativeCount / totalNews) * 100;
-
-  const avgConfidence = metrics.filter(m => m.confidence).length > 0
-    ? metrics.filter(m => m.confidence).reduce((sum, m) => sum + (m.confidence ?? 0), 0) / metrics.filter(m => m.confidence).length
-    : 0;
-
   const changeFromPrev = metrics.filter(m => m.previousScore).length > 0
-    ? metrics.filter(m => m.previousScore).reduce((sum, m) => sum + (m.score - (m.previousScore ?? m.score)), 0) / metrics.filter(m => m.previousScore).length
+    ? metrics.reduce((sum, m) => sum + (m.score - (m.previousScore ?? m.score)), 0) / metrics.filter(m => m.previousScore).length
     : 0;
 
   return [
@@ -110,33 +98,19 @@ function buildSummaryMetrics(metrics: RiskMetric[], news: MarketNews[]) {
       label: "Overall Risk Score",
       value: avgScore.toFixed(1),
       change: changeFromPrev,
-      changeLabel: "vs last period",
+      changeLabel: "vs base scores",
       icon: "shield" as const,
       severity: avgScore >= 65 ? "high" as const : avgScore >= 45 ? "medium" as const : "low" as const,
+      tooltip: "The average adjusted risk score across all 28 auditable units and 7 risk dimensions. Scores range from 0 (minimal risk) to 100 (critical risk). This reflects the combined impact of incident data, regulatory changes, and market news on base audit scores.",
     },
     {
-      label: "Predicted Risk",
-      value: avgPredicted.toFixed(1),
-      change: avgPredicted - avgScore,
-      changeLabel: "projected shift",
+      label: "Risk Score Change",
+      value: `${changeFromPrev >= 0 ? "+" : ""}${changeFromPrev.toFixed(1)}`,
+      change: changeFromPrev,
+      changeLabel: "from adjustments",
       icon: "chart" as const,
-      severity: avgPredicted >= 65 ? "high" as const : avgPredicted >= 45 ? "medium" as const : "low" as const,
-    },
-    {
-      label: "Negative Sentiment",
-      value: `${negativeRatio.toFixed(0)}%`,
-      change: negativeRatio > 40 ? 5.2 : -3.1,
-      changeLabel: `${negativeCount} of ${totalNews} articles`,
-      icon: "alert" as const,
-      severity: negativeRatio >= 50 ? "critical" as const : negativeRatio >= 35 ? "high" as const : "medium" as const,
-    },
-    {
-      label: "Model Confidence",
-      value: `${(avgConfidence * 100).toFixed(0)}%`,
-      change: -2.1,
-      changeLabel: "model accuracy",
-      icon: "activity" as const,
-      severity: avgConfidence >= 0.85 ? "low" as const : avgConfidence >= 0.7 ? "medium" as const : "high" as const,
+      severity: Math.abs(changeFromPrev) >= 10 ? "critical" as const : Math.abs(changeFromPrev) >= 5 ? "high" as const : Math.abs(changeFromPrev) >= 2 ? "medium" as const : "low" as const,
+      tooltip: "The average change in risk scores compared to base audit scores. This captures how much incident data, regulatory changes, and market news have shifted risk levels. A positive value means risk is increasing; negative means it's decreasing.",
     },
   ];
 }
