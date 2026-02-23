@@ -2,11 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { RiskHeatmap } from "@/components/risk-heatmap";
 import { RiskSummaryCards } from "@/components/risk-summary-cards";
-import { RiskAlerts } from "@/components/risk-alerts";
 import { RiskTrendChart } from "@/components/risk-trend-chart";
 import { SectorDetailPanel } from "@/components/sector-detail-panel";
 import { NewsFeed } from "@/components/news-feed";
-import type { RiskSector, RiskMetric, RiskAlert, HeatmapData, MarketNews } from "@shared/schema";
+import type { RiskSector, RiskMetric, HeatmapData, MarketNews } from "@shared/schema";
 
 export default function Dashboard() {
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
@@ -19,10 +18,6 @@ export default function Dashboard() {
     queryKey: ["/api/metrics"],
   });
 
-  const { data: alerts = [], isLoading: alertsLoading } = useQuery<RiskAlert[]>({
-    queryKey: ["/api/alerts"],
-  });
-
   const { data: heatmap = [], isLoading: heatmapLoading } = useQuery<HeatmapData[]>({
     queryKey: ["/api/heatmap"],
   });
@@ -31,7 +26,7 @@ export default function Dashboard() {
     queryKey: ["/api/news"],
   });
 
-  const isLoading = sectorsLoading || metricsLoading || alertsLoading || heatmapLoading;
+  const isLoading = sectorsLoading || metricsLoading || heatmapLoading;
 
   const heatmapCells = heatmap.map((h) => ({
     sector: sectors.find((s) => s.id === h.sectorId)?.name ?? "",
@@ -77,14 +72,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <RiskTrendChart metrics={metrics} sectors={sectors} isLoading={isLoading} />
-          </div>
-          <div className="lg:col-span-1">
-            <RiskAlerts alerts={alerts} sectors={sectors} isLoading={isLoading} />
-          </div>
-        </div>
+        <RiskTrendChart metrics={metrics} sectors={sectors} isLoading={isLoading} />
 
         <NewsFeed news={news} isLoading={newsLoading} maxItems={10} />
       </div>
