@@ -16,6 +16,8 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
+  Cell,
+  LabelList,
 } from "recharts";
 import type { RiskSector, RiskMetric, HeatmapData } from "@shared/schema";
 
@@ -63,11 +65,17 @@ export default function AnalyticsPage() {
 
   const topRisks = [...metrics]
     .sort((a, b) => b.score - a.score)
-    .slice(0, 8)
-    .map(m => ({
-      ...m,
-      sectorName: sectors.find(s => s.id === m.sectorId)?.name ?? "Unknown",
-    }));
+    .slice(0, 10)
+    .map(m => {
+      const sectorName = sectors.find(s => s.id === m.sectorId)?.name ?? "Unknown";
+      const shortName = sectorName.length > 20 ? sectorName.substring(0, 18) + "…" : sectorName;
+      return {
+        ...m,
+        sectorName,
+        label: `${shortName} · ${m.metricType}`,
+        barColor: m.score >= 80 ? "#ef4444" : m.score >= 65 ? "#f97316" : m.score >= 50 ? "#eab308" : "#22c55e",
+      };
+    });
 
   return (
     <div className="h-full overflow-auto">
@@ -121,42 +129,70 @@ export default function AnalyticsPage() {
 
         <RiskTrendChart metrics={metrics} sectors={sectors} isLoading={isLoading} />
 
-        <Card className="p-4 sm:p-6">
-          <h3 className="text-base font-semibold mb-4">Top Risk Exposures</h3>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="animate-pulse h-12 bg-muted/30 rounded-md" />
-              ))}
+        <Card className="p-4 sm:p-6" data-testid="card-top-risks">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-semibold">Top Risk Exposures</h3>
+            <div className="flex items-center gap-3 text-[10px]">
+              <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-red-500" /><span className="text-muted-foreground">Critical (80+)</span></div>
+              <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-orange-500" /><span className="text-muted-foreground">High (65-79)</span></div>
+              <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-yellow-500" /><span className="text-muted-foreground">Elevated (50-64)</span></div>
             </div>
+          </div>
+          {isLoading ? (
+            <div className="h-[360px] animate-pulse bg-muted/30 rounded-md" />
           ) : (
-            <div className="space-y-3">
-              {topRisks.map((risk, idx) => {
-                const color = risk.score >= 80 ? "text-red-600 dark:text-red-400" :
-                  risk.score >= 65 ? "text-orange-600 dark:text-orange-400" :
-                  risk.score >= 50 ? "text-amber-600 dark:text-amber-400" :
-                  "text-emerald-600 dark:text-emerald-400";
-                const progressColor = risk.score >= 80 ? "[&>div]:bg-red-500" :
-                  risk.score >= 65 ? "[&>div]:bg-orange-500" :
-                  risk.score >= 50 ? "[&>div]:bg-amber-500" :
-                  "[&>div]:bg-emerald-500";
-
-                return (
-                  <div key={risk.id} className="flex items-center gap-4" data-testid={`risk-exposure-${idx}`}>
-                    <span className="text-xs text-muted-foreground w-4 font-mono">{idx + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm font-medium truncate">{risk.sectorName}</span>
-                          <Badge variant="secondary" className="text-[10px] shrink-0">{risk.metricType}</Badge>
+            <div className="h-[360px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={topRisks}
+                  layout="vertical"
+                  margin={{ top: 5, right: 40, left: 10, bottom: 5 }}
+                  barCategoryGap="18%"
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
+                  <XAxis
+                    type="number"
+                    domain={[0, 100]}
+                    tick={{ fontSize: 10 }}
+                    stroke="hsl(var(--muted-foreground))"
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    width={200}
+                    tick={{ fontSize: 11 }}
+                    stroke="hsl(var(--muted-foreground))"
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <RechartsTooltip
+                    content={({ active, payload }: any) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0]?.payload;
+                      return (
+                        <div className="bg-popover border rounded-md p-3 shadow-lg text-xs space-y-1">
+                          <p className="font-semibold text-sm">{d.sectorName}</p>
+                          <p>Dimension: {d.metricType}</p>
+                          <p className="font-bold">Score: {d.score.toFixed(1)}/100</p>
                         </div>
-                        <span className={`text-sm font-bold tabular-nums ${color}`}>{risk.score.toFixed(1)}</span>
-                      </div>
-                      <Progress value={risk.score} className={`h-1.5 ${progressColor}`} />
-                    </div>
-                  </div>
-                );
-              })}
+                      );
+                    }}
+                  />
+                  <Bar dataKey="score" radius={[0, 6, 6, 0]} maxBarSize={28}>
+                    {topRisks.map((entry, index) => (
+                      <Cell key={index} fill={entry.barColor} />
+                    ))}
+                    <LabelList
+                      dataKey="score"
+                      position="right"
+                      formatter={(val: number) => val.toFixed(0)}
+                      className="fill-foreground text-[11px] font-bold"
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
         </Card>
