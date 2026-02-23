@@ -45,7 +45,7 @@ function App() {
                 <header className="flex items-center gap-2 p-2 border-b h-12 shrink-0">
                   <SidebarTrigger data-testid="button-sidebar-toggle" />
                   <div className="flex items-center gap-2 ml-auto">
-                    <span className="text-xs text-muted-foreground font-mono">DTCC RiskPulse v1.0</span>
+                    <span className="text-xs text-muted-foreground font-mono">DTCC Audit Radar v1.0</span>
                   </div>
                 </header>
                 <main className="flex-1 overflow-hidden">

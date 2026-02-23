@@ -11,7 +11,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Map, BarChart3, Bell, Settings, Shield, Activity, FileSearch } from "lucide-react";
+import { LayoutDashboard, Map, BarChart3, Bell, Settings, Activity, FileSearch } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -33,11 +33,19 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-md bg-primary">
-            <Shield className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+            <circle cx="32" cy="32" r="30" stroke="currentColor" strokeWidth="1.5" className="text-primary/30" />
+            <circle cx="32" cy="32" r="20" stroke="currentColor" strokeWidth="1.5" className="text-primary/40" />
+            <circle cx="32" cy="32" r="10" stroke="currentColor" strokeWidth="1.5" className="text-primary/60" />
+            <circle cx="32" cy="32" r="3" className="fill-primary" />
+            <line x1="32" y1="32" x2="32" y2="4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-primary" />
+            <line x1="32" y1="32" x2="54" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-primary/70" />
+            <circle cx="54" cy="20" r="3" className="fill-red-500" />
+            <circle cx="20" cy="22" r="2.5" className="fill-amber-500" />
+            <circle cx="44" cy="42" r="2.5" className="fill-emerald-500" />
+          </svg>
           <div>
-            <h1 className="text-sm font-bold tracking-tight">RiskPulse</h1>
+            <h1 className="text-sm font-bold tracking-tight">Audit Radar</h1>
             <p className="text-[10px] text-muted-foreground font-medium tracking-wide uppercase">DTCC AI Hackathon</p>
           </div>
         </div>
