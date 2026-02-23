@@ -15,6 +15,30 @@ interface NewsRow {
   Risk_Type: string;
 }
 
+interface IncidentRow {
+  "Incident ID": string;
+  "Incident Title": string;
+  Description: string;
+  "Impacted Business Process": string;
+  "Impacted Business Areas": string;
+  "Time of Identification": string;
+  Priority: string;
+  "Risk Severity": string;
+  "Resolution Time (hrs)": number;
+  "Resolution Description": string;
+  Owner: string;
+}
+
+interface RegRow {
+  Regulator: string;
+  "Rule / Release": string;
+  "Description of change": string;
+  "Impacted business areas": string;
+  "Impacted processes": string;
+  "Risk raised (?) / lowered (?)": string;
+  "Predictive insights / forward\u2010looking notes": string;
+}
+
 const RISK_DIMENSIONS = [
   "Financial", "Regulatory", "Operational", "Change",
   "Control Env", "Fraud", "Data/Tech", "Reputation"
@@ -31,8 +55,12 @@ const RISK_DIM_INDICES: Record<string, number> = {
   "Reputation": 15,
 };
 
+function clamp(val: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, val));
+}
+
 function scaleScore(raw: number): number {
-  return Math.min(100, Math.max(0, (raw / 5) * 100));
+  return clamp((raw / 5) * 100, 0, 100);
 }
 
 function getSeverityFromScore(score: number): string {
@@ -42,6 +70,242 @@ function getSeverityFromScore(score: number): string {
   return "low";
 }
 
+const SEVERITY_WEIGHT: Record<string, number> = {
+  "Severe": 4, "Major": 3, "Moderate": 2, "Minor": 1,
+};
+
+const PRIORITY_WEIGHT: Record<string, number> = {
+  "Critical": 4, "High": 3, "Medium": 2, "Low": 1,
+};
+
+const BIZ_AREA_TO_CATEGORIES: Record<string, string[]> = {
+  "IT": ["Technology"],
+  "Finance": ["Financial Risk", "Finance"],
+  "Operations": ["Operations"],
+  "Customer Service": ["Revenue", "Operations"],
+  "Sales": ["Revenue", "Finance"],
+  "HR": ["HR"],
+};
+
+const BIZ_PROCESS_TO_DIMENSIONS: Record<string, string[]> = {
+  "Financial Reporting": ["Financial", "Control Env"],
+  "Customer Support": ["Reputation", "Operational"],
+  "Order Processing": ["Operational", "Control Env"],
+  "IT Operations": ["Data/Tech", "Operational"],
+  "Payroll": ["Operational", "Fraud"],
+  "Inventory Management": ["Operational", "Change"],
+};
+
+const NEWS_RISKTYPE_TO_DIMENSIONS: Record<string, string[]> = {
+  "Fraud Risk": ["Fraud", "Control Env"],
+  "Operational Risk": ["Operational", "Change"],
+  "Market Risk": ["Financial", "Reputation"],
+  "Audit Risk": ["Control Env", "Regulatory"],
+};
+
+const NEWS_CATEGORY_TO_CATEGORIES: Record<string, string[]> = {
+  "Financial risk": ["Financial Risk"],
+  "Finance": ["Finance"],
+  "Operations": ["Operations"],
+  "HR": ["HR"],
+  "Technology": ["Technology"],
+  "Compliance": ["Compliance"],
+  "Governance": ["Governance"],
+  "Legal": ["Legal"],
+  "Facilities": ["Facilities"],
+};
+
+const REG_KEYWORD_TO_CATEGORIES: Record<string, string[]> = {
+  "cyber": ["Technology"],
+  "IT": ["Technology"],
+  "ICT": ["Technology"],
+  "data": ["Technology", "Governance"],
+  "privacy": ["Compliance", "Technology"],
+  "broker": ["Financial Risk", "Revenue"],
+  "investment": ["Financial Risk"],
+  "risk management": ["Governance", "Financial Risk"],
+  "compliance": ["Compliance"],
+  "audit": ["Governance"],
+  "governance": ["Governance"],
+  "vendor": ["Operations", "Technology"],
+  "outsourc": ["Operations"],
+  "payment": ["Finance", "Operations"],
+  "bank": ["Financial Risk", "Finance"],
+  "reporting": ["Finance", "Governance"],
+  "AML": ["Compliance"],
+  "fraud": ["Compliance", "Financial Risk"],
+  "operational resilience": ["Operations", "Technology", "Facilities"],
+  "business continuity": ["Facilities", "Operations"],
+  "incident": ["Technology", "Operations"],
+  "transfer agent": ["Operations", "Finance"],
+  "access management": ["Technology"],
+};
+
+const REG_KEYWORD_TO_DIMENSIONS: Record<string, string[]> = {
+  "cyber": ["Data/Tech", "Operational"],
+  "IT": ["Data/Tech"],
+  "ICT": ["Data/Tech", "Operational"],
+  "privacy": ["Regulatory", "Reputation"],
+  "data": ["Data/Tech"],
+  "incident": ["Operational", "Control Env"],
+  "compliance": ["Regulatory", "Control Env"],
+  "governance": ["Control Env", "Regulatory"],
+  "fraud": ["Fraud"],
+  "risk management": ["Operational", "Control Env"],
+  "vendor": ["Operational", "Change"],
+  "outsourc": ["Operational", "Change"],
+  "reporting": ["Financial", "Regulatory"],
+  "breach": ["Data/Tech", "Reputation"],
+  "operational resilience": ["Operational", "Change"],
+  "business continuity": ["Operational", "Change"],
+  "access management": ["Data/Tech", "Fraud"],
+  "AML": ["Regulatory", "Fraud"],
+};
+
+function computeIncidentAdjustments(incidents: IncidentRow[]): Record<string, Record<string, number>> {
+  const catDimAccum: Record<string, Record<string, number>> = {};
+  const catDimCount: Record<string, Record<string, number>> = {};
+
+  for (const inc of incidents) {
+    const sev = SEVERITY_WEIGHT[inc["Risk Severity"]] || 1;
+    const pri = PRIORITY_WEIGHT[inc.Priority] || 1;
+    const impact = sev * pri;
+
+    const categories = BIZ_AREA_TO_CATEGORIES[inc["Impacted Business Areas"]] || [];
+    const dimensions = BIZ_PROCESS_TO_DIMENSIONS[inc["Impacted Business Process"]] || ["Operational"];
+
+    for (const cat of categories) {
+      if (!catDimAccum[cat]) { catDimAccum[cat] = {}; catDimCount[cat] = {}; }
+      for (const dim of dimensions) {
+        catDimAccum[cat][dim] = (catDimAccum[cat][dim] || 0) + impact;
+        catDimCount[cat][dim] = (catDimCount[cat][dim] || 0) + 1;
+      }
+    }
+  }
+
+  const result: Record<string, Record<string, number>> = {};
+  for (const cat of Object.keys(catDimAccum)) {
+    result[cat] = {};
+    for (const dim of Object.keys(catDimAccum[cat])) {
+      const totalImpact = catDimAccum[cat][dim];
+      const count = catDimCount[cat][dim];
+      const avgImpact = totalImpact / count;
+      result[cat][dim] = clamp((avgImpact / 16) * 10, 0, 10);
+    }
+  }
+
+  return result;
+}
+
+function computeRegAdjustments(regs: RegRow[]): Record<string, Record<string, number>> {
+  const catDimAccum: Record<string, Record<string, number>> = {};
+
+  for (const reg of regs) {
+    const areasText = (reg["Impacted business areas"] || "").toLowerCase();
+    const processText = (reg["Impacted processes"] || "").toLowerCase();
+    const riskText = (reg["Risk raised (?) / lowered (?)"] || "");
+    const combinedText = areasText + " " + processText;
+
+    const raisedCount = (riskText.match(/↑/g) || []).length + (riskText.match(/\?.*risk/gi) || []).length;
+    const loweredCount = (riskText.match(/↓/g) || []).length;
+    const netDirection = raisedCount >= loweredCount ? 1 : -0.5;
+
+    const matchedCategories = new Set<string>();
+    const matchedDimensions = new Set<string>();
+
+    for (const [keyword, cats] of Object.entries(REG_KEYWORD_TO_CATEGORIES)) {
+      if (combinedText.includes(keyword.toLowerCase())) {
+        cats.forEach(c => matchedCategories.add(c));
+      }
+    }
+
+    for (const [keyword, dims] of Object.entries(REG_KEYWORD_TO_DIMENSIONS)) {
+      if (combinedText.includes(keyword.toLowerCase())) {
+        dims.forEach(d => matchedDimensions.add(d));
+      }
+    }
+
+    matchedDimensions.add("Regulatory");
+
+    if (matchedCategories.size === 0) {
+      matchedCategories.add("Governance");
+      matchedCategories.add("Compliance");
+    }
+
+    const perRegImpact = 3 * netDirection;
+
+    const catArray = Array.from(matchedCategories);
+    const dimArray = Array.from(matchedDimensions);
+    for (const cat of catArray) {
+      if (!catDimAccum[cat]) catDimAccum[cat] = {};
+      for (const dim of dimArray) {
+        catDimAccum[cat][dim] = (catDimAccum[cat][dim] || 0) + perRegImpact;
+      }
+    }
+  }
+
+  const result: Record<string, Record<string, number>> = {};
+  for (const cat of Object.keys(catDimAccum)) {
+    result[cat] = {};
+    for (const dim of Object.keys(catDimAccum[cat])) {
+      result[cat][dim] = clamp(catDimAccum[cat][dim], -8, 8);
+    }
+  }
+
+  return result;
+}
+
+function computeNewsAdjustments(news: NewsRow[]): Record<string, Record<string, number>> {
+  const catDimAccum: Record<string, Record<string, number>> = {};
+  const catDimCount: Record<string, Record<string, number>> = {};
+
+  for (const article of news) {
+    const sentimentScore = article.Sentiment === "Negative" ? 2
+      : article.Sentiment === "Neutral" ? 0
+      : -1;
+
+    const categories = NEWS_CATEGORY_TO_CATEGORIES[article.Category] || [];
+    const dimensions = NEWS_RISKTYPE_TO_DIMENSIONS[article.Risk_Type] || ["Operational"];
+
+    for (const cat of categories) {
+      if (!catDimAccum[cat]) { catDimAccum[cat] = {}; catDimCount[cat] = {}; }
+      for (const dim of dimensions) {
+        catDimAccum[cat][dim] = (catDimAccum[cat][dim] || 0) + sentimentScore;
+        catDimCount[cat][dim] = (catDimCount[cat][dim] || 0) + 1;
+      }
+    }
+  }
+
+  const result: Record<string, Record<string, number>> = {};
+  for (const cat of Object.keys(catDimAccum)) {
+    result[cat] = {};
+    for (const dim of Object.keys(catDimAccum[cat])) {
+      const totalSentiment = catDimAccum[cat][dim];
+      const count = catDimCount[cat][dim];
+      const avgSentiment = totalSentiment / count;
+      result[cat][dim] = clamp(avgSentiment * 3, -8, 8);
+    }
+  }
+
+  return result;
+}
+
+function mergeAdjustments(
+  baseScore: number,
+  category: string,
+  dimension: string,
+  incidentAdj: Record<string, Record<string, number>>,
+  regAdj: Record<string, Record<string, number>>,
+  newsAdj: Record<string, Record<string, number>>,
+): number {
+  const inc = incidentAdj[category]?.[dimension] || 0;
+  const reg = regAdj[category]?.[dimension] || 0;
+  const news = newsAdj[category]?.[dimension] || 0;
+
+  const totalAdj = inc + reg + news;
+  return clamp(Math.round(baseScore + totalAdj), 0, 100);
+}
+
 export async function seedDatabase() {
   const existingSectors = await db.select().from(riskSectors);
   if (existingSectors.length > 0) {
@@ -49,7 +313,7 @@ export async function seedDatabase() {
     return;
   }
 
-  console.log("Seeding database from Excel files...");
+  console.log("Seeding database with scoring algorithm from all data sources...");
 
   const xlsxModule = await import("xlsx");
   const XLSX = xlsxModule.default || xlsxModule;
@@ -58,11 +322,32 @@ export async function seedDatabase() {
   const auditWb = XLSX.readFile(auditPath);
   const auditSheet = auditWb.Sheets["Audit Universe"];
   const auditRows: any[][] = XLSX.utils.sheet_to_json(auditSheet, { header: 1 });
-
   const dataRows = auditRows.slice(3).filter((r: any[]) => r[2]);
   console.log(`Parsed ${dataRows.length} auditable units from Audit Universe`);
 
-  const sectorMap: Record<string, string> = {};
+  const incidentPath = path.resolve("attached_assets/Incident_data_1771869675474.xlsx");
+  const incidentWb = XLSX.readFile(incidentPath);
+  const incidentRows: IncidentRow[] = XLSX.utils.sheet_to_json(incidentWb.Sheets["IT Incidents"]);
+  console.log(`Parsed ${incidentRows.length} incidents from Incident Data`);
+
+  const regPath = path.resolve("attached_assets/Reg_inputs_1771869675475.xlsx");
+  const regWb = XLSX.readFile(regPath);
+  const regRows: RegRow[] = XLSX.utils.sheet_to_json(regWb.Sheets["Reg inputs"]);
+  console.log(`Parsed ${regRows.length} regulatory inputs from Reg Inputs`);
+
+  const newsPath = path.resolve("attached_assets/Predictive_Audit_Market_News_With_Articles_Updated_Categories_1771869675476.xlsx");
+  const newsWb = XLSX.readFile(newsPath);
+  const newsRows: NewsRow[] = XLSX.utils.sheet_to_json(newsWb.Sheets["Sheet1"]);
+  console.log(`Parsed ${newsRows.length} news articles from Updated Market News`);
+
+  console.log("Computing score adjustments from 3 data sources...");
+  const incidentAdj = computeIncidentAdjustments(incidentRows);
+  const regAdj = computeRegAdjustments(regRows);
+  const newsAdj = computeNewsAdjustments(newsRows);
+
+  console.log("Incident adjustment categories:", Object.keys(incidentAdj));
+  console.log("Regulatory adjustment categories:", Object.keys(regAdj));
+  console.log("News adjustment categories:", Object.keys(newsAdj));
 
   for (const row of dataRows) {
     const unitName = String(row[2]);
@@ -75,56 +360,69 @@ export async function seedDatabase() {
       category: category,
       description: processScope || `${subCategory} - ${unitName}`,
     });
-    sectorMap[unitName] = created.id;
+
+    let totalAdjustedScore = 0;
+    let maxAdjustedScore = 0;
+    let maxDim = "";
+    const dimScores: Record<string, number> = {};
 
     for (const dim of RISK_DIMENSIONS) {
       const colIdx = RISK_DIM_INDICES[dim];
       const rawScore = Number(row[colIdx]) || 0;
-      const scaledValue = scaleScore(rawScore);
+      const baseScaled = scaleScore(rawScore);
 
-      const prevRaw = Math.max(1, Math.min(5, rawScore + (Math.random() * 1.2 - 0.6)));
-      const prevScaled = scaleScore(prevRaw);
-      const trend = scaledValue > prevScaled ? "up" : scaledValue < prevScaled ? "down" : "stable";
+      const adjustedScore = mergeAdjustments(baseScaled, category, dim, incidentAdj, regAdj, newsAdj);
+      dimScores[dim] = adjustedScore;
+      totalAdjustedScore += adjustedScore;
+
+      const prevScaled = scaleScore(Math.max(1, Math.min(5, rawScore + (Math.random() * 1.2 - 0.6))));
+      const trend = adjustedScore > prevScaled ? "up" : adjustedScore < prevScaled ? "down" : "stable";
 
       const predictedRaw = Math.max(1, Math.min(5, rawScore + (Math.random() * 0.8 - 0.2)));
-      const predictedScaled = scaleScore(predictedRaw);
+      const predictedBase = scaleScore(predictedRaw);
+      const predictedAdj = mergeAdjustments(predictedBase, category, dim, incidentAdj, regAdj, newsAdj);
       const confidence = 0.7 + Math.random() * 0.25;
 
       await storage.createMetric({
         sectorId: created.id,
         metricType: dim,
-        score: scaledValue,
+        score: adjustedScore,
         previousScore: prevScaled,
-        predictedScore: predictedScaled,
+        predictedScore: predictedAdj,
         confidence,
       });
 
       await storage.createHeatmapData({
         sectorId: created.id,
         riskDimension: dim,
-        value: scaledValue,
+        value: adjustedScore,
         trend,
       });
+
+      if (adjustedScore > maxAdjustedScore) {
+        maxAdjustedScore = adjustedScore;
+        maxDim = dim;
+      }
     }
 
-    const selectedScore = Number(row[18]) || 0;
-    const severity = String(row[19] || "");
-    if (selectedScore >= 4) {
+    const avgScore = Math.round(totalAdjustedScore / RISK_DIMENSIONS.length);
+    const severity = getSeverityFromScore(avgScore);
+    if (avgScore >= 65) {
+      const topDims = Object.entries(dimScores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([d, s]) => `${d}: ${s}`)
+        .join(", ");
       await storage.createAlert({
         sectorId: created.id,
-        severity: severity === "Critical" ? "critical" : severity === "High" ? "high" : "medium",
-        title: `${unitName}: ${severity} Risk Level`,
-        description: `${unitName} has a weighted risk score of ${selectedScore.toFixed(1)}/5.0. Process scope: ${processScope.substring(0, 120)}`,
-        metricType: "Overall",
+        severity,
+        title: `${unitName}: ${severity.charAt(0).toUpperCase() + severity.slice(1)} Risk Level`,
+        description: `${unitName} has an average adjusted score of ${avgScore}/100, incorporating incident data, regulatory changes, and market news signals. Top risk dimensions: ${topDims}. Process scope: ${processScope.substring(0, 100)}`,
+        metricType: maxDim,
         timestamp: new Date(),
       });
     }
   }
-
-  const newsPath = path.resolve("attached_assets/Market_News__1771860683030.xlsx");
-  const newsWb = XLSX.readFile(newsPath);
-  const newsRows: NewsRow[] = XLSX.utils.sheet_to_json(newsWb.Sheets["Market_Risk_News"]);
-  console.log(`Parsed ${newsRows.length} news articles from Market News`);
 
   for (const row of newsRows) {
     await storage.createMarketNews({
@@ -140,5 +438,5 @@ export async function seedDatabase() {
     });
   }
 
-  console.log("Database seeded successfully from Excel data!");
+  console.log("Database seeded successfully with adjusted scores from all data sources!");
 }
