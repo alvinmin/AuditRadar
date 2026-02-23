@@ -15,23 +15,27 @@ interface NewsRow {
   Risk_Type: string;
 }
 
-const SECTOR_DESCRIPTIONS: Record<string, { category: string; description: string }> = {
-  Technology: { category: "Technology", description: "Tech companies, software, hardware, and digital infrastructure" },
-  Energy: { category: "Resources", description: "Oil, gas, renewables, and energy infrastructure" },
-  Healthcare: { category: "Life Sciences", description: "Pharmaceuticals, biotech, medical devices, and health services" },
-  Industrials: { category: "Manufacturing", description: "Manufacturing, logistics, aerospace, and industrial services" },
-  Financials: { category: "Financial Services", description: "Banks, insurance, asset management, and financial markets" },
+const RISK_DIMENSIONS = [
+  "Financial", "Regulatory", "Operational", "Change",
+  "Control Env", "Fraud", "Data/Tech", "Reputation"
+];
+
+const RISK_DIM_INDICES: Record<string, number> = {
+  "Financial": 8,
+  "Regulatory": 9,
+  "Operational": 10,
+  "Change": 11,
+  "Control Env": 12,
+  "Fraud": 13,
+  "Data/Tech": 14,
+  "Reputation": 15,
 };
 
-const RISK_TYPES = ["Fraud Risk", "Operational Risk", "Market Risk", "Audit Risk"];
-
-function sentimentToScore(sentiment: string): number {
-  if (sentiment === "Negative") return 70 + Math.random() * 25;
-  if (sentiment === "Positive") return 15 + Math.random() * 25;
-  return 35 + Math.random() * 25;
+function scaleScore(raw: number): number {
+  return Math.min(100, Math.max(0, (raw / 5) * 100));
 }
 
-function getSeverity(score: number): string {
+function getSeverityFromScore(score: number): string {
   if (score >= 80) return "critical";
   if (score >= 65) return "high";
   if (score >= 45) return "medium";
@@ -45,30 +49,84 @@ export async function seedDatabase() {
     return;
   }
 
-  console.log("Seeding database from Excel file...");
+  console.log("Seeding database from Excel files...");
 
   const xlsxModule = await import("xlsx");
   const XLSX = xlsxModule.default || xlsxModule;
-  const filePath = path.resolve("attached_assets/Market_News__1771860683030.xlsx");
-  const wb = XLSX.readFile(filePath);
-  const rows: NewsRow[] = XLSX.utils.sheet_to_json(wb.Sheets["Market_Risk_News"]);
 
-  console.log(`Parsed ${rows.length} news articles from Excel`);
+  const auditPath = path.resolve("attached_assets/Internal_Audit_Universe_Auto_Scoring_1771865142852.xlsm");
+  const auditWb = XLSX.readFile(auditPath);
+  const auditSheet = auditWb.Sheets["Audit Universe"];
+  const auditRows: any[][] = XLSX.utils.sheet_to_json(auditSheet, { header: 1 });
 
-  const sectorNames = Array.from(new Set(rows.map(r => r.Sector)));
+  const dataRows = auditRows.slice(3).filter((r: any[]) => r[2]);
+  console.log(`Parsed ${dataRows.length} auditable units from Audit Universe`);
+
   const sectorMap: Record<string, string> = {};
 
-  for (const name of sectorNames) {
-    const info = SECTOR_DESCRIPTIONS[name] || { category: "Other", description: name };
+  for (const row of dataRows) {
+    const unitName = String(row[2]);
+    const category = String(row[0] || "General");
+    const subCategory = String(row[1] || "");
+    const processScope = String(row[3] || "");
+
     const created = await storage.createSector({
-      name,
-      category: info.category,
-      description: info.description,
+      name: unitName,
+      category: category,
+      description: processScope || `${subCategory} - ${unitName}`,
     });
-    sectorMap[name] = created.id;
+    sectorMap[unitName] = created.id;
+
+    for (const dim of RISK_DIMENSIONS) {
+      const colIdx = RISK_DIM_INDICES[dim];
+      const rawScore = Number(row[colIdx]) || 0;
+      const scaledValue = scaleScore(rawScore);
+
+      const prevRaw = Math.max(1, Math.min(5, rawScore + (Math.random() * 1.2 - 0.6)));
+      const prevScaled = scaleScore(prevRaw);
+      const trend = scaledValue > prevScaled ? "up" : scaledValue < prevScaled ? "down" : "stable";
+
+      const predictedRaw = Math.max(1, Math.min(5, rawScore + (Math.random() * 0.8 - 0.2)));
+      const predictedScaled = scaleScore(predictedRaw);
+      const confidence = 0.7 + Math.random() * 0.25;
+
+      await storage.createMetric({
+        sectorId: created.id,
+        metricType: dim,
+        score: scaledValue,
+        previousScore: prevScaled,
+        predictedScore: predictedScaled,
+        confidence,
+      });
+
+      await storage.createHeatmapData({
+        sectorId: created.id,
+        riskDimension: dim,
+        value: scaledValue,
+        trend,
+      });
+    }
+
+    const selectedScore = Number(row[18]) || 0;
+    const severity = String(row[19] || "");
+    if (selectedScore >= 4) {
+      await storage.createAlert({
+        sectorId: created.id,
+        severity: severity === "Critical" ? "critical" : severity === "High" ? "high" : "medium",
+        title: `${unitName}: ${severity} Risk Level`,
+        description: `${unitName} has a weighted risk score of ${selectedScore.toFixed(1)}/5.0. Process scope: ${processScope.substring(0, 120)}`,
+        metricType: "Overall",
+        timestamp: new Date(),
+      });
+    }
   }
 
-  for (const row of rows) {
+  const newsPath = path.resolve("attached_assets/Market_News__1771860683030.xlsx");
+  const newsWb = XLSX.readFile(newsPath);
+  const newsRows: NewsRow[] = XLSX.utils.sheet_to_json(newsWb.Sheets["Market_Risk_News"]);
+  console.log(`Parsed ${newsRows.length} news articles from Market News`);
+
+  for (const row of newsRows) {
     await storage.createMarketNews({
       date: row.Date,
       source: row.Source,
@@ -79,78 +137,6 @@ export async function seedDatabase() {
       sentiment: row.Sentiment,
       sector: row.Sector,
       riskType: row.Risk_Type,
-    });
-  }
-
-  for (const sectorName of sectorNames) {
-    const sectorId = sectorMap[sectorName];
-    const sectorArticles = rows.filter(r => r.Sector === sectorName);
-
-    for (const riskType of RISK_TYPES) {
-      const relevant = sectorArticles.filter(r => r.Risk_Type === riskType);
-      const negCount = relevant.filter(r => r.Sentiment === "Negative").length;
-      const posCount = relevant.filter(r => r.Sentiment === "Positive").length;
-      const neutralCount = relevant.filter(r => r.Sentiment === "Neutral").length;
-      const total = relevant.length || 1;
-
-      const score = Math.min(95, Math.max(10,
-        (negCount / total) * 85 + (neutralCount / total) * 50 + (posCount / total) * 20 + (Math.random() * 10 - 5)
-      ));
-
-      const previousScore = Math.min(95, Math.max(10, score + (Math.random() * 16 - 8)));
-      const predictedScore = Math.min(95, Math.max(10, score + (Math.random() * 12 - 4)));
-      const confidence = 0.7 + Math.random() * 0.25;
-
-      await storage.createMetric({
-        sectorId,
-        metricType: riskType,
-        score,
-        previousScore,
-        predictedScore,
-        confidence,
-      });
-
-      const trend = score > previousScore ? "up" : score < previousScore ? "down" : "stable";
-      await storage.createHeatmapData({
-        sectorId,
-        riskDimension: riskType,
-        value: score,
-        trend,
-      });
-    }
-  }
-
-  const negativeArticles = rows.filter(r => r.Sentiment === "Negative");
-  const sortedByDate = [...negativeArticles].sort((a, b) => b.Date.localeCompare(a.Date));
-  const alertArticles = sortedByDate.slice(0, 12);
-
-  for (const article of alertArticles) {
-    const sectorId = sectorMap[article.Sector];
-    const sectorArticles = rows.filter(r => r.Sector === article.Sector && r.Risk_Type === article.Risk_Type);
-    const negRatio = sectorArticles.filter(r => r.Sentiment === "Negative").length / (sectorArticles.length || 1);
-    const severity = negRatio >= 0.5 ? "critical" : negRatio >= 0.35 ? "high" : "medium";
-
-    await storage.createAlert({
-      sectorId,
-      severity,
-      title: article.Headline,
-      description: article.Article_Summary,
-      metricType: article.Risk_Type,
-      timestamp: new Date(article.Date),
-    });
-  }
-
-  const positiveArticles = rows.filter(r => r.Sentiment === "Positive");
-  const recentPositive = [...positiveArticles].sort((a, b) => b.Date.localeCompare(a.Date)).slice(0, 4);
-  for (const article of recentPositive) {
-    const sectorId = sectorMap[article.Sector];
-    await storage.createAlert({
-      sectorId,
-      severity: "low",
-      title: article.Headline,
-      description: article.Article_Summary,
-      metricType: article.Risk_Type,
-      timestamp: new Date(article.Date),
     });
   }
 

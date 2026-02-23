@@ -16,7 +16,7 @@ export default function HeatmapPage() {
   const { data: metrics = [] } = useQuery<RiskMetric[]>({ queryKey: ["/api/metrics"] });
   const { data: heatmap = [] } = useQuery<HeatmapData[]>({ queryKey: ["/api/heatmap"] });
 
-  const categories = [...new Set(sectors.map(s => s.category))];
+  const categories = Array.from(new Set(sectors.map(s => s.category)));
   const filteredSectors = categoryFilter === "all" ? sectors : sectors.filter(s => s.category === categoryFilter);
 
   const heatmapCells = heatmap

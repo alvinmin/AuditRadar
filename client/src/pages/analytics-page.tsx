@@ -53,7 +53,7 @@ export default function AnalyticsPage() {
     return { name: sector.name, current: avg, predicted };
   });
 
-  const radarData = ["Fraud Risk", "Operational Risk", "Market Risk", "Audit Risk"].map((dim) => {
+  const radarData = ["Financial", "Regulatory", "Operational", "Change", "Control Env", "Fraud", "Data/Tech", "Reputation"].map((dim) => {
     const dimHeatmap = heatmap.filter(h => h.riskDimension === dim);
     const avg = dimHeatmap.length > 0
       ? dimHeatmap.reduce((sum, h) => sum + h.value, 0) / dimHeatmap.length
@@ -89,7 +89,7 @@ export default function AnalyticsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={sectorScores} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" angle={-20} textAnchor="end" height={50} />
+                    <XAxis dataKey="name" tick={{ fontSize: 8 }} stroke="hsl(var(--muted-foreground))" angle={-45} textAnchor="end" height={80} interval={0} />
                     <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                     <RechartsTooltip content={<CustomTooltip />} />
                     <Bar dataKey="current" name="Current" fill="#3b82f6" radius={[4, 4, 0, 0]} />

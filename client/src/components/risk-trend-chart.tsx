@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -20,10 +22,14 @@ interface RiskTrendChartProps {
 }
 
 const METRIC_COLORS: Record<string, string> = {
-  "Fraud Risk": "hsl(0, 84%, 55%)",
-  "Operational Risk": "hsl(43, 74%, 55%)",
-  "Market Risk": "hsl(217, 91%, 50%)",
-  "Audit Risk": "hsl(270, 70%, 55%)",
+  "Financial": "hsl(217, 91%, 50%)",
+  "Regulatory": "hsl(0, 84%, 55%)",
+  "Operational": "hsl(43, 74%, 55%)",
+  "Change": "hsl(173, 58%, 45%)",
+  "Control Env": "hsl(270, 70%, 55%)",
+  "Fraud": "hsl(340, 82%, 52%)",
+  "Data/Tech": "hsl(200, 80%, 50%)",
+  "Reputation": "hsl(30, 80%, 55%)",
 };
 
 function generateTrendData(metrics: RiskMetric[], sectors: RiskSector[]) {
@@ -76,6 +82,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function RiskTrendChart({ metrics, sectors, isLoading }: RiskTrendChartProps) {
+  const [selectedMetric, setSelectedMetric] = useState("Financial");
+
   if (isLoading) {
     return (
       <Card className="p-4 sm:p-6">
@@ -88,7 +96,7 @@ export function RiskTrendChart({ metrics, sectors, isLoading }: RiskTrendChartPr
   }
 
   const sectorTrendData = generateTrendData(metrics, sectors);
-  const metricTypes = ["Fraud Risk", "Operational Risk", "Market Risk", "Audit Risk"];
+  const metricTypes = ["Financial", "Regulatory", "Operational", "Change", "Control Env", "Fraud", "Data/Tech", "Reputation"];
 
   return (
     <Card className="p-4 sm:p-6">
@@ -145,9 +153,21 @@ export function RiskTrendChart({ metrics, sectors, isLoading }: RiskTrendChartPr
         </TabsContent>
 
         <TabsContent value="metric">
+          <div className="mb-3">
+            <Select value={selectedMetric} onValueChange={setSelectedMetric}>
+              <SelectTrigger className="w-[180px]" data-testid="select-metric-type">
+                <SelectValue placeholder="Select dimension" />
+              </SelectTrigger>
+              <SelectContent>
+                {metricTypes.map(mt => (
+                  <SelectItem key={mt} value={mt}>{mt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={generateMetricTrendData(metrics, "Market")} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+              <AreaChart data={generateMetricTrendData(metrics, selectedMetric)} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                 <defs>
                   <linearGradient id="gradientCurrent" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />

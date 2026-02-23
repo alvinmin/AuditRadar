@@ -20,7 +20,7 @@ interface RiskHeatmapProps {
   selectedSector?: string | null;
 }
 
-const RISK_DIMENSIONS = ["Fraud Risk", "Operational Risk", "Market Risk", "Audit Risk"];
+const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Control Env", "Fraud", "Data/Tech", "Reputation"];
 
 function getColorForValue(value: number): string {
   if (value >= 80) return "bg-red-600/90 dark:bg-red-500/80";
@@ -85,7 +85,7 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
 
       <div className="overflow-x-auto">
         <div className="min-w-[600px]">
-          <div className="grid gap-1" style={{ gridTemplateColumns: `160px repeat(${RISK_DIMENSIONS.length}, 1fr)` }}>
+          <div className="grid gap-1" style={{ gridTemplateColumns: `200px repeat(${RISK_DIMENSIONS.length}, 1fr)` }}>
             <div className="p-2" />
             {RISK_DIMENSIONS.map((dim) => (
               <div key={dim} className="p-2 text-center">
