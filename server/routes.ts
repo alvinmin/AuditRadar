@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { computeDriversForSector } from "./drivers";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -77,6 +78,19 @@ export async function registerRoutes(
       res.json(news);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch news for sector" });
+    }
+  });
+
+  app.get("/api/sectors/:id/drivers", async (req, res) => {
+    try {
+      const sector = await storage.getSector(req.params.id);
+      if (!sector) return res.status(404).json({ message: "Sector not found" });
+      const drivers = await computeDriversForSector(sector.name);
+      if (!drivers) return res.status(404).json({ message: "Driver data not found for this sector" });
+      res.json(drivers);
+    } catch (error) {
+      console.error("Failed to compute drivers:", error);
+      res.status(500).json({ message: "Failed to compute score drivers" });
     }
   });
 

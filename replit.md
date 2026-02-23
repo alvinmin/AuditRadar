@@ -10,10 +10,11 @@ A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualiz
 - **State Management**: TanStack React Query
 
 ## Project Structure
-- `client/src/pages/` - Dashboard, Heatmap, Analytics, Alerts pages
+- `client/src/pages/` - Dashboard, Heatmap, Analytics, Alerts, Score Drivers pages
 - `client/src/components/` - Reusable risk visualization components (risk-heatmap, risk-trend-chart, news-feed, etc.)
 - `server/` - Express API server with PostgreSQL storage
 - `server/seed.ts` - Scoring algorithm that integrates all data sources
+- `server/drivers.ts` - Score explainability engine: computes per-dimension breakdowns with driver details and recommended actions
 - `shared/schema.ts` - Drizzle schema definitions (riskSectors, riskMetrics, riskAlerts, heatmapData, marketNews)
 
 ## Data Sources

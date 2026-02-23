@@ -11,6 +11,7 @@ import Dashboard from "@/pages/dashboard";
 import HeatmapPage from "@/pages/heatmap-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import AlertsPage from "@/pages/alerts-page";
+import DriversPage from "@/pages/drivers-page";
 
 function Router() {
   return (
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/heatmap" component={HeatmapPage} />
       <Route path="/analytics" component={AnalyticsPage} />
       <Route path="/alerts" component={AlertsPage} />
+      <Route path="/drivers" component={DriversPage} />
       <Route component={NotFound} />
     </Switch>
   );

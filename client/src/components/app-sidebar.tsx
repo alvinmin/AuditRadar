@@ -11,7 +11,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Map, BarChart3, Bell, Settings, Shield, Activity } from "lucide-react";
+import { LayoutDashboard, Map, BarChart3, Bell, Settings, Shield, Activity, FileSearch } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ const navItems = [
   { title: "Heatmap", url: "/heatmap", icon: Map },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Alerts", url: "/alerts", icon: Bell },
+  { title: "Score Drivers", url: "/drivers", icon: FileSearch },
 ];
 
 export function AppSidebar() {
