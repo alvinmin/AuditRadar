@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
+import auditRadarLogo from "@assets/Audit_Radar_Logo_1771881831743.png";
 
 const navItems = [
   { title: "Audit Radar", url: "/", icon: LayoutDashboard },
@@ -33,17 +34,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2.5">
-          <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
-            <circle cx="32" cy="32" r="30" stroke="currentColor" strokeWidth="1.5" className="text-primary/30" />
-            <circle cx="32" cy="32" r="20" stroke="currentColor" strokeWidth="1.5" className="text-primary/40" />
-            <circle cx="32" cy="32" r="10" stroke="currentColor" strokeWidth="1.5" className="text-primary/60" />
-            <circle cx="32" cy="32" r="3" className="fill-primary" />
-            <line x1="32" y1="32" x2="32" y2="4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-primary" />
-            <line x1="32" y1="32" x2="54" y2="20" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-primary/70" />
-            <circle cx="54" cy="20" r="3" className="fill-red-500" />
-            <circle cx="20" cy="22" r="2.5" className="fill-amber-500" />
-            <circle cx="44" cy="42" r="2.5" className="fill-emerald-500" />
-          </svg>
+          <img src={auditRadarLogo} alt="Audit Radar" className="w-9 h-9 shrink-0 rounded" />
           <div>
             <h1 className="text-sm font-bold tracking-tight">Audit Radar</h1>
             <p className="text-[10px] text-muted-foreground font-medium tracking-wide uppercase">DTCC AI Hackathon</p>
