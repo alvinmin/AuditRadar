@@ -536,7 +536,7 @@ export default function DriversPage() {
               <RiskRadarChart
                 dimensions={drivers.dimensions}
                 selectedDimension={selectedDimension}
-                onSelectDimension={setSelectedDimension}
+                onSelectDimension={(dim) => setSelectedDimension(selectedDimension === dim ? null : dim)}
               />
 
               {selectedDim ? (
@@ -580,19 +580,18 @@ export default function DriversPage() {
               </Card>
             )}
 
-            {!selectedDimension && (
-              <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  All Dimensions Overview
-                </h3>
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                All Dimensions Overview
+              </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {drivers.dimensions
                     .sort((a, b) => b.adjustedScore - a.adjustedScore)
                     .map(dim => (
                       <Card
                         key={dim.dimension}
-                        className={`p-3 cursor-pointer transition-colors hover:border-primary/40 ${selectedDimension === dim.dimension ? "border-primary" : ""}`}
-                        onClick={() => setSelectedDimension(dim.dimension)}
+                        className={`p-3 cursor-pointer transition-colors hover:border-primary/40 ${selectedDimension === dim.dimension ? "border-primary ring-1 ring-primary/30" : ""}`}
+                        onClick={() => setSelectedDimension(selectedDimension === dim.dimension ? null : dim.dimension)}
                         data-testid={`card-dim-${dim.dimension.replace(/[\s/]/g, "-")}`}
                       >
                         <div className="flex items-center justify-between">
@@ -628,7 +627,6 @@ export default function DriversPage() {
                     ))}
                 </div>
               </div>
-            )}
           </>
         )}
       </div>
