@@ -28,13 +28,12 @@ const DIMENSION_COLORS: Record<string, string> = {
   "Regulatory": "#ef4444",
   "Operational": "#f59e0b",
   "Change": "#14b8a6",
-  "Control Env": "#8b5cf6",
   "Fraud": "#ec4899",
   "Data/Tech": "#06b6d4",
   "Reputation": "#f97316",
 };
 
-const METRIC_TYPES = ["Financial", "Regulatory", "Operational", "Change", "Control Env", "Fraud", "Data/Tech", "Reputation"];
+const METRIC_TYPES = ["Financial", "Regulatory", "Operational", "Change", "Fraud", "Data/Tech", "Reputation"];
 
 function interpolateQuarterly(currentScore: number, previousScore: number): number[] {
   const baseEstimate = previousScore;

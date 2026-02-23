@@ -135,7 +135,7 @@ function RiskRadarChart({ dimensions, selectedDimension, onSelectDimension }: {
   onSelectDimension: (dim: string) => void;
 }) {
   const radarData = dimensions.map(d => ({
-    dimension: d.dimension.replace("Control Env", "Ctrl Env").replace("Data/Tech", "Data/Tech"),
+    dimension: d.dimension.replace("Data/Tech", "Data/Tech"),
     fullDimension: d.dimension,
     base: d.baseScore,
     adjusted: d.adjustedScore,

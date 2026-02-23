@@ -18,7 +18,7 @@ A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualiz
 - `shared/schema.ts` - Drizzle schema definitions (riskSectors, riskMetrics, riskAlerts, heatmapData, marketNews)
 
 ## Data Sources
-- **Audit Universe** (`attached_assets/Internal_Audit_Universe_Auto_Scoring_1771865142852.xlsm`): "Audit Universe" sheet with 28 auditable units (Column C) and 8 risk scoring dimensions (Financial, Regulatory, Operational, Change, Control Env, Fraud, Data/Tech, Reputation). Scores are 1-5, scaled to 0-100 for display. These are the BASE scores.
+- **Audit Universe** (`attached_assets/Internal_Audit_Universe_Auto_Scoring_1771865142852.xlsm`): "Audit Universe" sheet with 28 auditable units (Column C) and 7 risk scoring dimensions (Financial, Regulatory, Operational, Change, Fraud, Data/Tech, Reputation). Scores are 1-5, scaled to 0-100 for display. These are the BASE scores.
 - **Incident Data** (`attached_assets/Incident_data_1771869675474.xlsx`): 100 IT incidents with Priority (Critical/High/Medium/Low), Risk Severity (Severe/Major/Moderate/Minor), Impacted Business Areas, and Impacted Business Process. Adjusts scores by +0 to +10 points.
 - **Regulatory Inputs** (`attached_assets/Reg_inputs_1771869675475.xlsx`): 6 regulatory changes from SEC/EU with impacted business areas/processes and risk direction. Keyword-matched to categories and dimensions. Adjusts scores by -8 to +8 points.
 - **Market News** (`attached_assets/Predictive_Audit_Market_News_With_Articles_Updated_Categories_1771874482512.xlsx`, Sheet2): 20 news articles with title, source, summary, and category. Sentiment and risk type are derived algorithmically. Sentiment-based adjustments of -8 to +8 points.
@@ -30,10 +30,10 @@ A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualiz
 4. **News adjustments**: Map article category → audit unit category, risk type → dimensions. Sentiment scoring (Negative=+2, Neutral=0, Positive=-1), averaged and scaled ×3, clamped to ±8.
 5. **Final**: `Updated Score = clamp(Base + Incident + Regulatory + News, 0, 100)`
 6. **Predicted Score** (Weighted Momentum): `Predicted = clamp(Current + (News×1.5 + Regulatory×1.2 + Incident×0.8) × 0.3, 0, 100)`. News gets highest weight (trends snowball), regulatory moderate (impact compounds), incidents lowest (get remediated). Confidence derived from signal consistency: all sources same direction → 0.75-0.90; mixed signals → 0.45-0.70.
-7. **Alerts**: Generated when the average absolute score change (sum of incident + regulatory + news adjustments) across all 8 dimensions ≥ 5 points. Severity: Critical (≥10 pts), High (7-9.9 pts), Medium (5-6.9 pts). Each alert includes a driver breakdown showing which adjustments (Incidents, Regulatory, News) contributed to the top 3 most-changed dimensions.
+7. **Alerts**: Generated when the average absolute score change (sum of incident + regulatory + news adjustments) across all 7 dimensions ≥ 5 points. Severity: Critical (≥10 pts), High (7-9.9 pts), Medium (5-6.9 pts). Each alert includes a driver breakdown showing which adjustments (Incidents, Regulatory, News) contributed to the top 3 most-changed dimensions.
 
 ## Key Features
-- Interactive risk heatmap: 28 auditable units (vertical) x 8 risk dimensions (horizontal) with color-coded severity
+- Interactive risk heatmap: 28 auditable units (vertical) x 7 risk dimensions (horizontal) with color-coded severity
 - Summary metric cards with trend indicators and negative sentiment ratio
 - Risk trend analysis charts (by sector and by selectable metric dimension)
 - Alert management with severity filtering (alerts triggered by score change ≥5 pts avg, with driver breakdown)
@@ -45,9 +45,9 @@ A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualiz
 
 ## API Routes
 - GET /api/sectors - All 28 auditable units (stored as sectors)
-- GET /api/metrics - All 224 risk metrics (28 units x 8 dimensions)
+- GET /api/metrics - All 196 risk metrics (28 units x 7 dimensions)
 - GET /api/alerts - Risk alerts for high-scoring auditable units
-- GET /api/heatmap - 224 heatmap data points (28 x 8)
+- GET /api/heatmap - 196 heatmap data points (28 x 7)
 - GET /api/news - 20 market news articles (from Sheet2)
 - GET /api/news/:sector - News filtered by sector
 

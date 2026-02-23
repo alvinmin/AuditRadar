@@ -31,7 +31,7 @@ interface RegRow {
 
 const RISK_DIMENSIONS = [
   "Financial", "Regulatory", "Operational", "Change",
-  "Control Env", "Fraud", "Data/Tech", "Reputation"
+  "Fraud", "Data/Tech", "Reputation"
 ];
 
 const RISK_DIM_INDICES: Record<string, number> = {
@@ -39,7 +39,6 @@ const RISK_DIM_INDICES: Record<string, number> = {
   "Regulatory": 9,
   "Operational": 10,
   "Change": 11,
-  "Control Env": 12,
   "Fraud": 13,
   "Data/Tech": 14,
   "Reputation": 15,
@@ -78,19 +77,19 @@ const BIZ_AREA_TO_CATEGORIES: Record<string, string[]> = {
 };
 
 const BIZ_PROCESS_TO_DIMENSIONS: Record<string, string[]> = {
-  "Financial Reporting": ["Financial", "Control Env"],
+  "Financial Reporting": ["Financial"],
   "Customer Support": ["Reputation", "Operational"],
-  "Order Processing": ["Operational", "Control Env"],
+  "Order Processing": ["Operational"],
   "IT Operations": ["Data/Tech", "Operational"],
   "Payroll": ["Operational", "Fraud"],
   "Inventory Management": ["Operational", "Change"],
 };
 
 const NEWS_RISKTYPE_TO_DIMENSIONS: Record<string, string[]> = {
-  "Fraud Risk": ["Fraud", "Control Env"],
+  "Fraud Risk": ["Fraud"],
   "Operational Risk": ["Operational", "Change"],
   "Market Risk": ["Financial", "Reputation"],
-  "Audit Risk": ["Control Env", "Regulatory"],
+  "Audit Risk": ["Regulatory"],
 };
 
 const NEWS_CATEGORY_TO_CATEGORIES: Record<string, string[]> = {
@@ -137,11 +136,11 @@ const REG_KEYWORD_TO_DIMENSIONS: Record<string, string[]> = {
   "ICT": ["Data/Tech", "Operational"],
   "privacy": ["Regulatory", "Reputation"],
   "data": ["Data/Tech"],
-  "incident": ["Operational", "Control Env"],
-  "compliance": ["Regulatory", "Control Env"],
-  "governance": ["Control Env", "Regulatory"],
+  "incident": ["Operational"],
+  "compliance": ["Regulatory"],
+  "governance": ["Regulatory"],
   "fraud": ["Fraud"],
-  "risk management": ["Operational", "Control Env"],
+  "risk management": ["Operational"],
   "vendor": ["Operational", "Change"],
   "outsourc": ["Operational", "Change"],
   "reporting": ["Financial", "Regulatory"],

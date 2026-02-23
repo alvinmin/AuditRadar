@@ -18,7 +18,7 @@ interface RiskHeatmapProps {
   selectedSector?: string | null;
 }
 
-const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Control Env", "Fraud", "Data/Tech", "Reputation"];
+const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Fraud", "Data/Tech", "Reputation"];
 
 function getNeonColor(value: number): string {
   if (value >= 80) return "rgba(255, 0, 128, 0.85)";

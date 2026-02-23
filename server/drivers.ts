@@ -27,12 +27,12 @@ interface RegRow {
 
 const RISK_DIMENSIONS = [
   "Financial", "Regulatory", "Operational", "Change",
-  "Control Env", "Fraud", "Data/Tech", "Reputation"
+  "Fraud", "Data/Tech", "Reputation"
 ];
 
 const RISK_DIM_INDICES: Record<string, number> = {
   "Financial": 8, "Regulatory": 9, "Operational": 10, "Change": 11,
-  "Control Env": 12, "Fraud": 13, "Data/Tech": 14, "Reputation": 15,
+  "Fraud": 13, "Data/Tech": 14, "Reputation": 15,
 };
 
 const SEVERITY_WEIGHT: Record<string, number> = {
@@ -53,19 +53,19 @@ const BIZ_AREA_TO_CATEGORIES: Record<string, string[]> = {
 };
 
 const BIZ_PROCESS_TO_DIMENSIONS: Record<string, string[]> = {
-  "Financial Reporting": ["Financial", "Control Env"],
+  "Financial Reporting": ["Financial"],
   "Customer Support": ["Reputation", "Operational"],
-  "Order Processing": ["Operational", "Control Env"],
+  "Order Processing": ["Operational"],
   "IT Operations": ["Data/Tech", "Operational"],
   "Payroll": ["Operational", "Fraud"],
   "Inventory Management": ["Operational", "Change"],
 };
 
 const NEWS_RISKTYPE_TO_DIMENSIONS: Record<string, string[]> = {
-  "Fraud Risk": ["Fraud", "Control Env"],
+  "Fraud Risk": ["Fraud"],
   "Operational Risk": ["Operational", "Change"],
   "Market Risk": ["Financial", "Reputation"],
-  "Audit Risk": ["Control Env", "Regulatory"],
+  "Audit Risk": ["Regulatory"],
 };
 
 const NEWS_CATEGORY_TO_CATEGORIES: Record<string, string[]> = {
@@ -112,11 +112,11 @@ const REG_KEYWORD_TO_DIMENSIONS: Record<string, string[]> = {
   "ICT": ["Data/Tech", "Operational"],
   "privacy": ["Regulatory", "Reputation"],
   "data": ["Data/Tech"],
-  "incident": ["Operational", "Control Env"],
-  "compliance": ["Regulatory", "Control Env"],
-  "governance": ["Control Env", "Regulatory"],
+  "incident": ["Operational"],
+  "compliance": ["Regulatory"],
+  "governance": ["Regulatory"],
   "fraud": ["Fraud"],
-  "risk management": ["Operational", "Control Env"],
+  "risk management": ["Operational"],
   "vendor": ["Operational", "Change"],
   "outsourc": ["Operational", "Change"],
   "reporting": ["Financial", "Regulatory"],
@@ -141,7 +141,6 @@ const ACTION_MAP: Record<string, Record<string, string>> = {
     "Regulatory": "Evaluate regulatory compliance controls affected by recent incidents and update remediation plans.",
     "Operational": "Strengthen operational procedures and incident response playbooks to reduce recurrence.",
     "Change": "Assess change management processes for gaps exposed by recent incidents.",
-    "Control Env": "Enhance control environment testing and monitoring around incident-affected areas.",
     "Fraud": "Investigate fraud indicators surfaced by incidents and strengthen detection mechanisms.",
     "Data/Tech": "Review IT infrastructure resilience and patch management following technology incidents.",
     "Reputation": "Prepare stakeholder communication plans addressing reputational impact from incidents.",
@@ -151,7 +150,6 @@ const ACTION_MAP: Record<string, Record<string, string>> = {
     "Regulatory": "Map new regulatory requirements to existing controls and identify compliance gaps.",
     "Operational": "Update operational procedures to align with new regulatory mandates.",
     "Change": "Incorporate regulatory changes into change management and project planning frameworks.",
-    "Control Env": "Strengthen control testing to meet heightened regulatory expectations.",
     "Fraud": "Enhance anti-fraud programs to comply with updated regulatory fraud prevention standards.",
     "Data/Tech": "Begin DORA/cyber regulation compliance gap assessment and strengthen IT controls.",
     "Reputation": "Ensure public disclosures and governance communications meet new transparency standards.",
@@ -161,7 +159,6 @@ const ACTION_MAP: Record<string, Record<string, string>> = {
     "Regulatory": "Track emerging regulatory trends from industry news and prepare proactive responses.",
     "Operational": "Evaluate operational resilience against risks flagged by market intelligence.",
     "Change": "Assess whether change initiatives address emerging risks identified in industry news.",
-    "Control Env": "Review control adequacy in light of audit risk signals from market analysis.",
     "Fraud": "Heighten fraud monitoring based on negative sentiment indicators in industry news.",
     "Data/Tech": "Evaluate technology risk posture against cyber threats highlighted in news coverage.",
     "Reputation": "Monitor media sentiment and prepare crisis communication plans if trends worsen.",
