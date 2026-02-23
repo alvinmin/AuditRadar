@@ -365,15 +365,22 @@ export async function seedDatabase() {
     let maxAdjustedScore = 0;
     let maxDim = "";
     const dimScores: Record<string, number> = {};
+    const dimChanges: Array<{ dim: string; incAdj: number; regAdj_val: number; newsAdj_val: number; totalChange: number }> = [];
 
     for (const dim of RISK_DIMENSIONS) {
       const colIdx = RISK_DIM_INDICES[dim];
       const rawScore = Number(row[colIdx]) || 0;
       const baseScaled = scaleScore(rawScore);
 
-      const adjustedScore = mergeAdjustments(baseScaled, category, dim, incidentAdj, regAdj, newsAdj);
+      const inc = incidentAdj[category]?.[dim] || 0;
+      const reg = regAdj[category]?.[dim] || 0;
+      const news = newsAdj[category]?.[dim] || 0;
+      const totalChange = inc + reg + news;
+
+      const adjustedScore = clamp(Math.round(baseScaled + totalChange), 0, 100);
       dimScores[dim] = adjustedScore;
       totalAdjustedScore += adjustedScore;
+      dimChanges.push({ dim, incAdj: inc, regAdj_val: reg, newsAdj_val: news, totalChange });
 
       const prevScaled = scaleScore(Math.max(1, Math.min(5, rawScore + (Math.random() * 1.2 - 0.6))));
       const trend = adjustedScore > prevScaled ? "up" : adjustedScore < prevScaled ? "down" : "stable";
@@ -405,19 +412,30 @@ export async function seedDatabase() {
       }
     }
 
-    const avgScore = Math.round(totalAdjustedScore / RISK_DIMENSIONS.length);
-    const severity = getSeverityFromScore(avgScore);
-    if (avgScore >= 65) {
-      const topDims = Object.entries(dimScores)
-        .sort((a, b) => b[1] - a[1])
+    const avgChange = dimChanges.reduce((sum, d) => sum + Math.abs(d.totalChange), 0) / dimChanges.length;
+
+    if (avgChange >= 5) {
+      const severity = avgChange >= 10 ? "critical" : avgChange >= 7 ? "high" : "medium";
+      const sevLabel = severity.charAt(0).toUpperCase() + severity.slice(1);
+
+      const topDrivers = dimChanges
+        .filter(d => Math.abs(d.totalChange) > 0)
+        .sort((a, b) => Math.abs(b.totalChange) - Math.abs(a.totalChange))
         .slice(0, 3)
-        .map(([d, s]) => `${d}: ${s}`)
-        .join(", ");
+        .map(d => {
+          const parts: string[] = [];
+          if (Math.abs(d.incAdj) > 0) parts.push(`Incidents ${d.incAdj > 0 ? "+" : ""}${d.incAdj.toFixed(1)}`);
+          if (Math.abs(d.regAdj_val) > 0) parts.push(`Regulatory ${d.regAdj_val > 0 ? "+" : ""}${d.regAdj_val.toFixed(1)}`);
+          if (Math.abs(d.newsAdj_val) > 0) parts.push(`News ${d.newsAdj_val > 0 ? "+" : ""}${d.newsAdj_val.toFixed(1)}`);
+          return `${d.dim} (${d.totalChange > 0 ? "+" : ""}${d.totalChange.toFixed(1)}): ${parts.join(", ")}`;
+        })
+        .join(" | ");
+
       await storage.createAlert({
         sectorId: created.id,
         severity,
-        title: `${unitName}: ${severity.charAt(0).toUpperCase() + severity.slice(1)} Risk Level`,
-        description: `${unitName} has an average adjusted score of ${avgScore}/100, incorporating incident data, regulatory changes, and market news signals. Top risk dimensions: ${topDims}. Process scope: ${processScope.substring(0, 100)}`,
+        title: `${unitName}: ${sevLabel} Score Change Detected (avg ${avgChange >= 0 ? "+" : ""}${avgChange.toFixed(1)} pts)`,
+        description: `${unitName} shows significant score movement averaging ${avgChange.toFixed(1)} points across dimensions. Top drivers: ${topDrivers}`,
         metricType: maxDim,
         timestamp: new Date(),
       });

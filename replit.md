@@ -29,13 +29,13 @@ A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualiz
 3. **Regulatory adjustments**: Parse impacted areas/processes via keyword matching to categories and dimensions. Risk raised/lowered determines direction (±3 per regulation), clamped to ±8.
 4. **News adjustments**: Map article category → audit unit category, risk type → dimensions. Sentiment scoring (Negative=+2, Neutral=0, Positive=-1), averaged and scaled ×3, clamped to ±8.
 5. **Final**: `Updated Score = clamp(Base + Incident + Regulatory + News, 0, 100)`
-6. **Alerts**: Generated when average adjusted score across all 8 dimensions ≥ 65. Alert includes top 3 risk dimensions.
+6. **Alerts**: Generated when the average absolute score change (sum of incident + regulatory + news adjustments) across all 8 dimensions ≥ 5 points. Severity: Critical (≥10 pts), High (7-9.9 pts), Medium (5-6.9 pts). Each alert includes a driver breakdown showing which adjustments (Incidents, Regulatory, News) contributed to the top 3 most-changed dimensions.
 
 ## Key Features
 - Interactive risk heatmap: 28 auditable units (vertical) x 8 risk dimensions (horizontal) with color-coded severity
 - Summary metric cards with trend indicators and negative sentiment ratio
 - Risk trend analysis charts (by sector and by selectable metric dimension)
-- Alert management with severity filtering (alerts generated for high-risk auditable units)
+- Alert management with severity filtering (alerts triggered by score change ≥5 pts avg, with driver breakdown)
 - Sector detail drill-down panels
 - Market news feed with sentiment indicators
 - Category filtering on heatmap page
