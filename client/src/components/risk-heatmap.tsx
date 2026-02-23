@@ -1,8 +1,6 @@
 import { useState, Fragment } from "react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import type { HeatmapData, RiskSector } from "@shared/schema";
 
 interface HeatmapCellData {
@@ -22,18 +20,31 @@ interface RiskHeatmapProps {
 
 const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Control Env", "Fraud", "Data/Tech", "Reputation"];
 
-function getColorForValue(value: number): string {
-  if (value >= 80) return "bg-red-600/90 dark:bg-red-500/80";
-  if (value >= 65) return "bg-orange-500/80 dark:bg-orange-500/70";
-  if (value >= 50) return "bg-amber-500/70 dark:bg-amber-500/60";
-  if (value >= 35) return "bg-yellow-400/60 dark:bg-yellow-500/50";
-  if (value >= 20) return "bg-emerald-400/50 dark:bg-emerald-500/40";
-  return "bg-emerald-500/40 dark:bg-emerald-600/30";
+function getNeonColor(value: number): string {
+  if (value >= 80) return "rgba(255, 0, 128, 0.85)";
+  if (value >= 65) return "rgba(200, 0, 200, 0.75)";
+  if (value >= 50) return "rgba(160, 50, 255, 0.65)";
+  if (value >= 35) return "rgba(100, 80, 255, 0.55)";
+  if (value >= 20) return "rgba(0, 200, 255, 0.50)";
+  return "rgba(0, 255, 200, 0.40)";
 }
 
-function getTextColorForValue(value: number): string {
-  if (value >= 50) return "text-white";
-  return "text-foreground";
+function getNeonGlow(value: number): string {
+  if (value >= 80) return "0 0 12px rgba(255, 0, 128, 0.6), 0 0 24px rgba(255, 0, 128, 0.3), inset 0 0 8px rgba(255, 0, 128, 0.2)";
+  if (value >= 65) return "0 0 10px rgba(200, 0, 200, 0.5), 0 0 20px rgba(200, 0, 200, 0.2)";
+  if (value >= 50) return "0 0 8px rgba(160, 50, 255, 0.4), 0 0 16px rgba(160, 50, 255, 0.15)";
+  if (value >= 35) return "0 0 6px rgba(100, 80, 255, 0.3)";
+  if (value >= 20) return "0 0 6px rgba(0, 200, 255, 0.3)";
+  return "0 0 4px rgba(0, 255, 200, 0.2)";
+}
+
+function getNeonBorder(value: number): string {
+  if (value >= 80) return "1px solid rgba(255, 0, 128, 0.6)";
+  if (value >= 65) return "1px solid rgba(200, 0, 200, 0.5)";
+  if (value >= 50) return "1px solid rgba(160, 50, 255, 0.4)";
+  if (value >= 35) return "1px solid rgba(100, 80, 255, 0.3)";
+  if (value >= 20) return "1px solid rgba(0, 200, 255, 0.3)";
+  return "1px solid rgba(0, 255, 200, 0.2)";
 }
 
 function getTrendIcon(trend: string) {
@@ -61,44 +72,46 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
   };
 
   return (
-    <Card className="p-4 sm:p-6">
+    <div className="sf-heatmap-card rounded-lg p-4 sm:p-6" data-testid="heatmap-container">
       <div className="flex items-center justify-between gap-2 mb-5">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight" data-testid="text-heatmap-title">Predictive Risk Heatmap</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">Cross-sector risk assessment across key dimensions</p>
+          <h2 className="sf-title text-lg tracking-widest uppercase" data-testid="text-heatmap-title">
+            Predictive Risk Heatmap
+          </h2>
+          <p className="text-xs sf-subtitle mt-1 tracking-wide">Cross-sector risk assessment matrix // LIVE MONITORING</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <div className="w-3 h-3 rounded-sm bg-emerald-500/40" />
-            <span>Low</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
+            <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(0, 255, 200, 0.5)" }} />
+            <span className="sf-label">Low</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <div className="w-3 h-3 rounded-sm bg-amber-500/70" />
-            <span>Medium</span>
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
+            <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(160, 50, 255, 0.7)" }} />
+            <span className="sf-label">Medium</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <div className="w-3 h-3 rounded-sm bg-red-600/90" />
-            <span>High</span>
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
+            <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(255, 0, 128, 0.85)" }} />
+            <span className="sf-label">Critical</span>
           </div>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto sf-grid-container">
         <div className="min-w-[600px]">
-          <div className="grid gap-1" style={{ gridTemplateColumns: `200px repeat(${RISK_DIMENSIONS.length}, 1fr)` }}>
+          <div className="grid gap-[2px]" style={{ gridTemplateColumns: `200px repeat(${RISK_DIMENSIONS.length}, 1fr)` }}>
             <div className="p-2" />
             {RISK_DIMENSIONS.map((dim) => (
               <div key={dim} className="p-2 text-center">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{dim}</span>
+                <span className="sf-dimension-label text-[10px] uppercase tracking-[0.15em]">{dim}</span>
               </div>
             ))}
 
             {sectorNames.map((sector) => (
               <Fragment key={sector}>
                 <div
-                  className={`p-2 flex items-center text-sm font-medium truncate rounded-md transition-colors ${
+                  className={`p-2 flex items-center text-xs font-medium truncate rounded transition-colors sf-sector-label ${
                     selectedSector && sectors.find(s => s.name === sector)?.id === selectedSector
-                      ? "bg-primary/10 text-primary"
+                      ? "sf-sector-selected"
                       : ""
                   }`}
                 >
@@ -117,29 +130,37 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
                         <button
                           data-testid={`heatmap-cell-${sector.toLowerCase().replace(/\s+/g, '-')}-${dim.toLowerCase()}`}
                           className={`
-                            relative p-3 rounded-md cursor-pointer transition-all duration-200 border border-transparent
-                            ${getColorForValue(value)} ${getTextColorForValue(value)}
-                            ${isHovered ? "ring-2 ring-primary/50 scale-[1.02]" : ""}
-                            ${selectedSector && sectorObj?.id === selectedSector ? "ring-2 ring-primary" : ""}
+                            relative p-2.5 rounded cursor-pointer transition-all duration-300 sf-cell
+                            ${isHovered ? "scale-[1.08] z-10" : ""}
+                            ${selectedSector && sectorObj?.id === selectedSector ? "ring-1 ring-cyan-400/60" : ""}
                           `}
+                          style={{
+                            backgroundColor: getNeonColor(value),
+                            boxShadow: isHovered
+                              ? `${getNeonGlow(value)}, 0 0 30px rgba(0, 200, 255, 0.2)`
+                              : getNeonGlow(value),
+                            border: getNeonBorder(value),
+                          }}
                           onClick={() => sectorObj && onCellClick?.(sectorObj.id, dim)}
                           onMouseEnter={() => setHoveredCell(cellKey)}
                           onMouseLeave={() => setHoveredCell(null)}
                         >
                           <div className="flex flex-col items-center gap-0.5">
-                            <span className="text-base font-bold tabular-nums">{value.toFixed(0)}</span>
-                            <div className="flex items-center gap-0.5 opacity-80">
+                            <span className="sf-score text-sm font-bold tabular-nums text-white drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]">
+                              {value.toFixed(0)}
+                            </span>
+                            <div className="flex items-center gap-0.5 text-white/70">
                               {cell && getTrendIcon(cell.trend)}
                             </div>
                           </div>
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[200px]">
+                      <TooltipContent side="top" className="sf-tooltip">
                         <div className="text-xs space-y-1">
-                          <p className="font-semibold">{sector} - {dim}</p>
-                          <p>Risk Score: <span className="font-bold">{value.toFixed(1)}</span></p>
-                          <p>Level: {getRiskLabel(value)}</p>
-                          <p>Trend: {cell?.trend === "up" ? "Increasing" : cell?.trend === "down" ? "Decreasing" : "Stable"}</p>
+                          <p className="font-semibold sf-tooltip-title">{sector} — {dim}</p>
+                          <p>Risk Score: <span className="font-bold text-cyan-300">{value.toFixed(1)}</span></p>
+                          <p>Level: <span className="sf-tooltip-level">{getRiskLabel(value)}</span></p>
+                          <p>Trend: {cell?.trend === "up" ? "↑ Increasing" : cell?.trend === "down" ? "↓ Decreasing" : "→ Stable"}</p>
                         </div>
                       </TooltipContent>
                     </Tooltip>
@@ -150,6 +171,8 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
           </div>
         </div>
       </div>
-    </Card>
+
+      <div className="sf-scanline" />
+    </div>
   );
 }
