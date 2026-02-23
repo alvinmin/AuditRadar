@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -20,7 +20,7 @@ interface RiskHeatmapProps {
   selectedSector?: string | null;
 }
 
-const RISK_DIMENSIONS = ["Market", "Credit", "Liquidity", "Operational", "Systemic"];
+const RISK_DIMENSIONS = ["Fraud Risk", "Operational Risk", "Market Risk", "Audit Risk"];
 
 function getColorForValue(value: number): string {
   if (value >= 80) return "bg-red-600/90 dark:bg-red-500/80";
@@ -94,9 +94,8 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
             ))}
 
             {sectorNames.map((sector) => (
-              <>
+              <Fragment key={sector}>
                 <div
-                  key={`label-${sector}`}
                   className={`p-2 flex items-center text-sm font-medium truncate rounded-md transition-colors ${
                     selectedSector && sectors.find(s => s.name === sector)?.id === selectedSector
                       ? "bg-primary/10 text-primary"
@@ -146,7 +145,7 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
                     </Tooltip>
                   );
                 })}
-              </>
+              </Fragment>
             ))}
           </div>
         </div>

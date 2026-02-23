@@ -1,8 +1,7 @@
 import { storage } from "./storage";
 import { db } from "./db";
 import { riskSectors, riskMetrics, riskAlerts, heatmapData, marketNews } from "@shared/schema";
-import * as XLSX from "xlsx";
-import * as path from "path";
+import path from "path";
 
 interface NewsRow {
   Date: string;
@@ -48,13 +47,15 @@ export async function seedDatabase() {
 
   console.log("Seeding database from Excel file...");
 
+  const xlsxModule = await import("xlsx");
+  const XLSX = xlsxModule.default || xlsxModule;
   const filePath = path.resolve("attached_assets/Market_News__1771860683030.xlsx");
   const wb = XLSX.readFile(filePath);
   const rows: NewsRow[] = XLSX.utils.sheet_to_json(wb.Sheets["Market_Risk_News"]);
 
   console.log(`Parsed ${rows.length} news articles from Excel`);
 
-  const sectorNames = [...new Set(rows.map(r => r.Sector))];
+  const sectorNames = Array.from(new Set(rows.map(r => r.Sector)));
   const sectorMap: Record<string, string> = {};
 
   for (const name of sectorNames) {

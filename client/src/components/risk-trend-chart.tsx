@@ -20,11 +20,10 @@ interface RiskTrendChartProps {
 }
 
 const METRIC_COLORS: Record<string, string> = {
-  Market: "hsl(217, 91%, 50%)",
-  Credit: "hsl(0, 84%, 55%)",
-  Liquidity: "hsl(173, 58%, 45%)",
-  Operational: "hsl(43, 74%, 55%)",
-  Systemic: "hsl(270, 70%, 55%)",
+  "Fraud Risk": "hsl(0, 84%, 55%)",
+  "Operational Risk": "hsl(43, 74%, 55%)",
+  "Market Risk": "hsl(217, 91%, 50%)",
+  "Audit Risk": "hsl(270, 70%, 55%)",
 };
 
 function generateTrendData(metrics: RiskMetric[], sectors: RiskSector[]) {
@@ -89,7 +88,7 @@ export function RiskTrendChart({ metrics, sectors, isLoading }: RiskTrendChartPr
   }
 
   const sectorTrendData = generateTrendData(metrics, sectors);
-  const metricTypes = ["Market", "Credit", "Liquidity", "Operational", "Systemic"];
+  const metricTypes = ["Fraud Risk", "Operational Risk", "Market Risk", "Audit Risk"];
 
   return (
     <Card className="p-4 sm:p-6">

@@ -53,7 +53,7 @@ export default function AnalyticsPage() {
     return { name: sector.name, current: avg, predicted };
   });
 
-  const radarData = ["Market", "Credit", "Liquidity", "Operational", "Systemic"].map((dim) => {
+  const radarData = ["Fraud Risk", "Operational Risk", "Market Risk", "Audit Risk"].map((dim) => {
     const dimHeatmap = heatmap.filter(h => h.riskDimension === dim);
     const avg = dimHeatmap.length > 0
       ? dimHeatmap.reduce((sum, h) => sum + h.value, 0) / dimHeatmap.length

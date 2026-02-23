@@ -5,7 +5,8 @@ import { RiskSummaryCards } from "@/components/risk-summary-cards";
 import { RiskAlerts } from "@/components/risk-alerts";
 import { RiskTrendChart } from "@/components/risk-trend-chart";
 import { SectorDetailPanel } from "@/components/sector-detail-panel";
-import type { RiskSector, RiskMetric, RiskAlert, HeatmapData } from "@shared/schema";
+import { NewsFeed } from "@/components/news-feed";
+import type { RiskSector, RiskMetric, RiskAlert, HeatmapData, MarketNews } from "@shared/schema";
 
 export default function Dashboard() {
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
@@ -26,6 +27,10 @@ export default function Dashboard() {
     queryKey: ["/api/heatmap"],
   });
 
+  const { data: news = [], isLoading: newsLoading } = useQuery<MarketNews[]>({
+    queryKey: ["/api/news"],
+  });
+
   const isLoading = sectorsLoading || metricsLoading || alertsLoading || heatmapLoading;
 
   const heatmapCells = heatmap.map((h) => ({
@@ -36,7 +41,7 @@ export default function Dashboard() {
     trend: h.trend,
   }));
 
-  const summaryMetrics = buildSummaryMetrics(metrics);
+  const summaryMetrics = buildSummaryMetrics(metrics, news);
   const selectedSectorObj = sectors.find((s) => s.id === selectedSector);
 
   return (
@@ -45,7 +50,7 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Risk Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Real-time predictive risk monitoring across financial sectors
+            Predictive risk monitoring powered by market news intelligence
           </p>
         </div>
 
@@ -80,12 +85,14 @@ export default function Dashboard() {
             <RiskAlerts alerts={alerts} sectors={sectors} isLoading={isLoading} />
           </div>
         </div>
+
+        <NewsFeed news={news} isLoading={newsLoading} maxItems={10} />
       </div>
     </div>
   );
 }
 
-function buildSummaryMetrics(metrics: RiskMetric[]) {
+function buildSummaryMetrics(metrics: RiskMetric[], news: MarketNews[]) {
   const avgScore = metrics.length > 0
     ? metrics.reduce((sum, m) => sum + m.score, 0) / metrics.length
     : 0;
@@ -94,7 +101,10 @@ function buildSummaryMetrics(metrics: RiskMetric[]) {
     ? metrics.reduce((sum, m) => sum + (m.predictedScore ?? m.score), 0) / metrics.length
     : 0;
 
-  const criticalCount = metrics.filter((m) => m.score >= 75).length;
+  const negativeCount = news.filter(n => n.sentiment === "Negative").length;
+  const totalNews = news.length || 1;
+  const negativeRatio = (negativeCount / totalNews) * 100;
+
   const avgConfidence = metrics.filter(m => m.confidence).length > 0
     ? metrics.filter(m => m.confidence).reduce((sum, m) => sum + (m.confidence ?? 0), 0) / metrics.filter(m => m.confidence).length
     : 0;
@@ -121,12 +131,12 @@ function buildSummaryMetrics(metrics: RiskMetric[]) {
       severity: avgPredicted >= 65 ? "high" as const : avgPredicted >= 45 ? "medium" as const : "low" as const,
     },
     {
-      label: "Critical Alerts",
-      value: criticalCount.toString(),
-      change: criticalCount > 3 ? 12.5 : -8.3,
-      changeLabel: "vs last period",
+      label: "Negative Sentiment",
+      value: `${negativeRatio.toFixed(0)}%`,
+      change: negativeRatio > 40 ? 5.2 : -3.1,
+      changeLabel: `${negativeCount} of ${totalNews} articles`,
       icon: "alert" as const,
-      severity: criticalCount >= 5 ? "critical" as const : criticalCount >= 3 ? "high" as const : "medium" as const,
+      severity: negativeRatio >= 50 ? "critical" as const : negativeRatio >= 35 ? "high" as const : "medium" as const,
     },
     {
       label: "Model Confidence",
