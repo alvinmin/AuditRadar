@@ -1,4 +1,6 @@
 import path from "path";
+import { loadNewsFromSheet2 } from "./news-loader";
+import type { NewsRow } from "./news-loader";
 
 interface IncidentRow {
   "Incident ID": string;
@@ -21,17 +23,6 @@ interface RegRow {
   "Impacted business areas": string;
   "Impacted processes": string;
   "Risk raised (?) / lowered (?)": string;
-}
-
-interface NewsRow {
-  Category: string;
-  Date: string;
-  Source: string;
-  Headline: string;
-  Article_Summary: string;
-  Sentiment: string;
-  Sector: string;
-  Risk_Type: string;
 }
 
 const RISK_DIMENSIONS = [
@@ -243,9 +234,7 @@ async function loadData() {
   const regWb = XLSX.readFile(regPath);
   const regs: RegRow[] = XLSX.utils.sheet_to_json(regWb.Sheets["Reg inputs"]);
 
-  const newsPath = path.resolve("attached_assets/Predictive_Audit_Market_News_With_Articles_Updated_Categories_1771869675476.xlsx");
-  const newsWb = XLSX.readFile(newsPath);
-  const news: NewsRow[] = XLSX.utils.sheet_to_json(newsWb.Sheets["Sheet1"]);
+  const news: NewsRow[] = await loadNewsFromSheet2();
 
   cachedData = { auditRows, incidents, regs, news };
   return cachedData;

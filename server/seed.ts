@@ -2,18 +2,8 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { riskSectors, riskMetrics, riskAlerts, heatmapData, marketNews } from "@shared/schema";
 import path from "path";
-
-interface NewsRow {
-  Date: string;
-  Source: string;
-  Headline: string;
-  Full_Article_Text: string;
-  Article_Summary: string;
-  Category: string;
-  Sentiment: string;
-  Sector: string;
-  Risk_Type: string;
-}
+import { loadNewsFromSheet2 } from "./news-loader";
+import type { NewsRow } from "./news-loader";
 
 interface IncidentRow {
   "Incident ID": string;
@@ -335,10 +325,8 @@ export async function seedDatabase() {
   const regRows: RegRow[] = XLSX.utils.sheet_to_json(regWb.Sheets["Reg inputs"]);
   console.log(`Parsed ${regRows.length} regulatory inputs from Reg Inputs`);
 
-  const newsPath = path.resolve("attached_assets/Predictive_Audit_Market_News_With_Articles_Updated_Categories_1771869675476.xlsx");
-  const newsWb = XLSX.readFile(newsPath);
-  const newsRows: NewsRow[] = XLSX.utils.sheet_to_json(newsWb.Sheets["Sheet1"]);
-  console.log(`Parsed ${newsRows.length} news articles from Updated Market News`);
+  const newsRows: NewsRow[] = await loadNewsFromSheet2();
+  console.log(`Parsed ${newsRows.length} news articles from Sheet2 of Updated Market News`);
 
   console.log("Computing score adjustments from 3 data sources...");
   const incidentAdj = computeIncidentAdjustments(incidentRows);

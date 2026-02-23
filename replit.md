@@ -1,7 +1,7 @@
 # RiskPulse - Predictive Risk Heatmap
 
 ## Overview
-A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualizes real-time risk across auditable units using interactive heatmaps, trend charts, and alert systems. Data sourced from two Excel files: an Internal Audit Universe with 28 auditable units and a Market News dataset with 100 articles.
+A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualizes real-time risk across auditable units using interactive heatmaps, trend charts, and alert systems. Data sourced from four Excel files: an Internal Audit Universe with 28 auditable units, 100 IT incidents, 6 regulatory inputs, and 20 market news articles.
 
 ## Architecture
 - **Frontend**: React + TypeScript + Vite + TailwindCSS + Shadcn UI + Recharts
@@ -21,7 +21,7 @@ A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualiz
 - **Audit Universe** (`attached_assets/Internal_Audit_Universe_Auto_Scoring_1771865142852.xlsm`): "Audit Universe" sheet with 28 auditable units (Column C) and 8 risk scoring dimensions (Financial, Regulatory, Operational, Change, Control Env, Fraud, Data/Tech, Reputation). Scores are 1-5, scaled to 0-100 for display. These are the BASE scores.
 - **Incident Data** (`attached_assets/Incident_data_1771869675474.xlsx`): 100 IT incidents with Priority (Critical/High/Medium/Low), Risk Severity (Severe/Major/Moderate/Minor), Impacted Business Areas, and Impacted Business Process. Adjusts scores by +0 to +10 points.
 - **Regulatory Inputs** (`attached_assets/Reg_inputs_1771869675475.xlsx`): 6 regulatory changes from SEC/EU with impacted business areas/processes and risk direction. Keyword-matched to categories and dimensions. Adjusts scores by -8 to +8 points.
-- **Market News** (`attached_assets/Predictive_Audit_Market_News_With_Articles_Updated_Categories_1771869675476.xlsx`): 100 news articles with sentiment (Negative/Neutral/Positive), category, sector, and risk type. Sentiment-based adjustments of -8 to +8 points.
+- **Market News** (`attached_assets/Predictive_Audit_Market_News_With_Articles_Updated_Categories_1771874482512.xlsx`, Sheet2): 20 news articles with title, source, summary, and category. Sentiment and risk type are derived algorithmically. Sentiment-based adjustments of -8 to +8 points.
 
 ## Scoring Algorithm (seed.ts)
 1. **Base scores** from Audit Universe (1-5 raw, scaled to 0-100)
@@ -47,7 +47,7 @@ A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualiz
 - GET /api/metrics - All 224 risk metrics (28 units x 8 dimensions)
 - GET /api/alerts - Risk alerts for high-scoring auditable units
 - GET /api/heatmap - 224 heatmap data points (28 x 8)
-- GET /api/news - 100 market news articles
+- GET /api/news - 20 market news articles (from Sheet2)
 - GET /api/news/:sector - News filtered by sector
 
 ## Database
