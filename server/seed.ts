@@ -1,35 +1,42 @@
 import { storage } from "./storage";
 import { db } from "./db";
-import { riskSectors } from "@shared/schema";
+import { riskSectors, riskMetrics, riskAlerts, heatmapData, marketNews } from "@shared/schema";
+import * as XLSX from "xlsx";
+import * as path from "path";
 
-const SECTORS = [
-  { name: "Equities", category: "Capital Markets", description: "Stock markets and equity trading across global exchanges" },
-  { name: "Fixed Income", category: "Capital Markets", description: "Bond markets, treasuries, and fixed-rate instruments" },
-  { name: "Derivatives", category: "Capital Markets", description: "Options, futures, swaps, and structured products" },
-  { name: "Banking", category: "Financial Services", description: "Commercial and retail banking operations" },
-  { name: "Insurance", category: "Financial Services", description: "Life, property, and casualty insurance sectors" },
-  { name: "Fintech", category: "Technology", description: "Financial technology and digital payment platforms" },
-  { name: "Crypto/DeFi", category: "Digital Assets", description: "Cryptocurrency exchanges and decentralized finance" },
-  { name: "Real Estate", category: "Alternative Assets", description: "Commercial and residential real estate investment trusts" },
-];
+interface NewsRow {
+  Date: string;
+  Source: string;
+  Headline: string;
+  Full_Article_Text: string;
+  Article_Summary: string;
+  Category: string;
+  Sentiment: string;
+  Sector: string;
+  Risk_Type: string;
+}
 
-const METRIC_TYPES = ["Market", "Credit", "Liquidity", "Operational", "Systemic"];
+const SECTOR_DESCRIPTIONS: Record<string, { category: string; description: string }> = {
+  Technology: { category: "Technology", description: "Tech companies, software, hardware, and digital infrastructure" },
+  Energy: { category: "Resources", description: "Oil, gas, renewables, and energy infrastructure" },
+  Healthcare: { category: "Life Sciences", description: "Pharmaceuticals, biotech, medical devices, and health services" },
+  Industrials: { category: "Manufacturing", description: "Manufacturing, logistics, aerospace, and industrial services" },
+  Financials: { category: "Financial Services", description: "Banks, insurance, asset management, and financial markets" },
+};
 
-const ALERTS_DATA = [
-  { severity: "critical", title: "Systemic Contagion Risk Elevated", description: "Cross-sector correlation has exceeded 0.85 threshold, indicating potential systemic cascading failure. Immediate monitoring recommended.", metricType: "Systemic" },
-  { severity: "critical", title: "Liquidity Squeeze Detected", description: "Multiple counterparties reporting margin call pressure. Overnight repo rates spiked 340bps above normal.", metricType: "Liquidity" },
-  { severity: "high", title: "Credit Spread Widening", description: "Investment-grade credit spreads have widened by 125bps in the last 24 hours, approaching 2020 levels.", metricType: "Credit" },
-  { severity: "high", title: "Volatility Surge Warning", description: "VIX equivalent for this sector has breached the 85th percentile. Historical precedent suggests elevated tail risk.", metricType: "Market" },
-  { severity: "high", title: "Operational Incident Report", description: "Settlement failures increased 4x above baseline. Clearing house reporting processing delays.", metricType: "Operational" },
-  { severity: "medium", title: "Counterparty Exposure Threshold", description: "Aggregate counterparty exposure approaching 75% of risk appetite. Diversification review recommended.", metricType: "Credit" },
-  { severity: "medium", title: "Market Microstructure Alert", description: "Bid-ask spreads widening in key instruments. Market depth has decreased 40% from monthly average.", metricType: "Market" },
-  { severity: "medium", title: "Regulatory Compliance Update", description: "New capital adequacy requirements taking effect next quarter. Impact assessment in progress.", metricType: "Operational" },
-  { severity: "low", title: "Model Recalibration Notice", description: "Quarterly model validation complete. Minor adjustments to volatility surface fitting parameters.", metricType: "Market" },
-  { severity: "low", title: "Data Feed Latency", description: "Minor increase in market data feed latency detected. Within acceptable tolerance but monitoring.", metricType: "Operational" },
-];
+const RISK_TYPES = ["Fraud Risk", "Operational Risk", "Market Risk", "Audit Risk"];
 
-function generateScore(base: number, variance: number = 15): number {
-  return Math.max(5, Math.min(95, base + (Math.random() * variance * 2 - variance)));
+function sentimentToScore(sentiment: string): number {
+  if (sentiment === "Negative") return 70 + Math.random() * 25;
+  if (sentiment === "Positive") return 15 + Math.random() * 25;
+  return 35 + Math.random() * 25;
+}
+
+function getSeverity(score: number): string {
+  if (score >= 80) return "critical";
+  if (score >= 65) return "high";
+  if (score >= 45) return "medium";
+  return "low";
 }
 
 export async function seedDatabase() {
@@ -39,38 +46,63 @@ export async function seedDatabase() {
     return;
   }
 
-  console.log("Seeding database with risk data...");
+  console.log("Seeding database from Excel file...");
 
-  const createdSectors = [];
-  for (const sector of SECTORS) {
-    const created = await storage.createSector(sector);
-    createdSectors.push(created);
+  const filePath = path.resolve("attached_assets/Market_News__1771860683030.xlsx");
+  const wb = XLSX.readFile(filePath);
+  const rows: NewsRow[] = XLSX.utils.sheet_to_json(wb.Sheets["Market_Risk_News"]);
+
+  console.log(`Parsed ${rows.length} news articles from Excel`);
+
+  const sectorNames = [...new Set(rows.map(r => r.Sector))];
+  const sectorMap: Record<string, string> = {};
+
+  for (const name of sectorNames) {
+    const info = SECTOR_DESCRIPTIONS[name] || { category: "Other", description: name };
+    const created = await storage.createSector({
+      name,
+      category: info.category,
+      description: info.description,
+    });
+    sectorMap[name] = created.id;
   }
 
-  const sectorRiskProfiles: Record<string, Record<string, number>> = {
-    "Equities": { Market: 72, Credit: 45, Liquidity: 38, Operational: 30, Systemic: 55 },
-    "Fixed Income": { Market: 55, Credit: 68, Liquidity: 48, Operational: 28, Systemic: 45 },
-    "Derivatives": { Market: 78, Credit: 62, Liquidity: 58, Operational: 45, Systemic: 70 },
-    "Banking": { Market: 48, Credit: 72, Liquidity: 55, Operational: 42, Systemic: 65 },
-    "Insurance": { Market: 42, Credit: 55, Liquidity: 35, Operational: 38, Systemic: 40 },
-    "Fintech": { Market: 58, Credit: 40, Liquidity: 42, Operational: 65, Systemic: 35 },
-    "Crypto/DeFi": { Market: 88, Credit: 75, Liquidity: 72, Operational: 78, Systemic: 45 },
-    "Real Estate": { Market: 52, Credit: 60, Liquidity: 65, Operational: 32, Systemic: 48 },
-  };
+  for (const row of rows) {
+    await storage.createMarketNews({
+      date: row.Date,
+      source: row.Source,
+      headline: row.Headline,
+      fullArticleText: row.Full_Article_Text,
+      articleSummary: row.Article_Summary,
+      category: row.Category,
+      sentiment: row.Sentiment,
+      sector: row.Sector,
+      riskType: row.Risk_Type,
+    });
+  }
 
-  for (const sector of createdSectors) {
-    const profile = sectorRiskProfiles[sector.name] || {};
+  for (const sectorName of sectorNames) {
+    const sectorId = sectorMap[sectorName];
+    const sectorArticles = rows.filter(r => r.Sector === sectorName);
 
-    for (const metricType of METRIC_TYPES) {
-      const baseScore = profile[metricType] || 50;
-      const score = generateScore(baseScore, 8);
-      const previousScore = generateScore(baseScore, 10);
-      const predictedScore = generateScore(baseScore + (Math.random() > 0.5 ? 5 : -3), 10);
-      const confidence = 0.72 + Math.random() * 0.22;
+    for (const riskType of RISK_TYPES) {
+      const relevant = sectorArticles.filter(r => r.Risk_Type === riskType);
+      const negCount = relevant.filter(r => r.Sentiment === "Negative").length;
+      const posCount = relevant.filter(r => r.Sentiment === "Positive").length;
+      const neutralCount = relevant.filter(r => r.Sentiment === "Neutral").length;
+      const total = relevant.length || 1;
+
+      const score = Math.min(95, Math.max(10,
+        (negCount / total) * 85 + (neutralCount / total) * 50 + (posCount / total) * 20 + (Math.random() * 10 - 5)
+      ));
+
+      const previousScore = Math.min(95, Math.max(10, score + (Math.random() * 16 - 8)));
+      const predictedScore = Math.min(95, Math.max(10, score + (Math.random() * 12 - 4)));
+      const confidence = 0.7 + Math.random() * 0.25;
 
       await storage.createMetric({
-        sectorId: sector.id,
-        metricType,
+        sectorId,
+        metricType: riskType,
         score,
         previousScore,
         predictedScore,
@@ -79,28 +111,47 @@ export async function seedDatabase() {
 
       const trend = score > previousScore ? "up" : score < previousScore ? "down" : "stable";
       await storage.createHeatmapData({
-        sectorId: sector.id,
-        riskDimension: metricType,
+        sectorId,
+        riskDimension: riskType,
         value: score,
         trend,
       });
     }
   }
 
-  for (const alertData of ALERTS_DATA) {
-    const randomSector = createdSectors[Math.floor(Math.random() * createdSectors.length)];
-    const hoursAgo = Math.floor(Math.random() * 48);
-    const timestamp = new Date(Date.now() - hoursAgo * 60 * 60 * 1000);
+  const negativeArticles = rows.filter(r => r.Sentiment === "Negative");
+  const sortedByDate = [...negativeArticles].sort((a, b) => b.Date.localeCompare(a.Date));
+  const alertArticles = sortedByDate.slice(0, 12);
+
+  for (const article of alertArticles) {
+    const sectorId = sectorMap[article.Sector];
+    const sectorArticles = rows.filter(r => r.Sector === article.Sector && r.Risk_Type === article.Risk_Type);
+    const negRatio = sectorArticles.filter(r => r.Sentiment === "Negative").length / (sectorArticles.length || 1);
+    const severity = negRatio >= 0.5 ? "critical" : negRatio >= 0.35 ? "high" : "medium";
 
     await storage.createAlert({
-      sectorId: randomSector.id,
-      severity: alertData.severity,
-      title: alertData.title,
-      description: alertData.description,
-      metricType: alertData.metricType,
-      timestamp,
+      sectorId,
+      severity,
+      title: article.Headline,
+      description: article.Article_Summary,
+      metricType: article.Risk_Type,
+      timestamp: new Date(article.Date),
     });
   }
 
-  console.log("Database seeded successfully!");
+  const positiveArticles = rows.filter(r => r.Sentiment === "Positive");
+  const recentPositive = [...positiveArticles].sort((a, b) => b.Date.localeCompare(a.Date)).slice(0, 4);
+  for (const article of recentPositive) {
+    const sectorId = sectorMap[article.Sector];
+    await storage.createAlert({
+      sectorId,
+      severity: "low",
+      title: article.Headline,
+      description: article.Article_Summary,
+      metricType: article.Risk_Type,
+      timestamp: new Date(article.Date),
+    });
+  }
+
+  console.log("Database seeded successfully from Excel data!");
 }

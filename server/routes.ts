@@ -62,5 +62,23 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/news", async (_req, res) => {
+    try {
+      const news = await storage.getAllMarketNews();
+      res.json(news);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch market news" });
+    }
+  });
+
+  app.get("/api/news/:sector", async (req, res) => {
+    try {
+      const news = await storage.getMarketNewsBySector(req.params.sector);
+      res.json(news);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch news for sector" });
+    }
+  });
+
   return httpServer;
 }

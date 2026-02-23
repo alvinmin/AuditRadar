@@ -4,7 +4,8 @@ import {
   type RiskMetric, type InsertRiskMetric,
   type RiskAlert, type InsertRiskAlert,
   type HeatmapData, type InsertHeatmapData,
-  users, riskSectors, riskMetrics, riskAlerts, heatmapData
+  type MarketNews, type InsertMarketNews,
+  users, riskSectors, riskMetrics, riskAlerts, heatmapData, marketNews
 } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
@@ -29,6 +30,10 @@ export interface IStorage {
   getAllHeatmapData(): Promise<HeatmapData[]>;
   getHeatmapDataBySector(sectorId: string): Promise<HeatmapData[]>;
   createHeatmapData(data: InsertHeatmapData): Promise<HeatmapData>;
+
+  getAllMarketNews(): Promise<MarketNews[]>;
+  getMarketNewsBySector(sector: string): Promise<MarketNews[]>;
+  createMarketNews(news: InsertMarketNews): Promise<MarketNews>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -97,6 +102,19 @@ export class DatabaseStorage implements IStorage {
 
   async createHeatmapData(data: InsertHeatmapData): Promise<HeatmapData> {
     const [created] = await db.insert(heatmapData).values(data).returning();
+    return created;
+  }
+
+  async getAllMarketNews(): Promise<MarketNews[]> {
+    return db.select().from(marketNews);
+  }
+
+  async getMarketNewsBySector(sector: string): Promise<MarketNews[]> {
+    return db.select().from(marketNews).where(eq(marketNews.sector, sector));
+  }
+
+  async createMarketNews(news: InsertMarketNews): Promise<MarketNews> {
+    const [created] = await db.insert(marketNews).values(news).returning();
     return created;
   }
 }

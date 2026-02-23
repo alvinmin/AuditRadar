@@ -40,10 +40,24 @@ export const heatmapData = pgTable("heatmap_data", {
   timestamp: timestamp("timestamp").defaultNow().notNull(),
 });
 
+export const marketNews = pgTable("market_news", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: text("date").notNull(),
+  source: text("source").notNull(),
+  headline: text("headline").notNull(),
+  fullArticleText: text("full_article_text").notNull(),
+  articleSummary: text("article_summary").notNull(),
+  category: text("category").notNull(),
+  sentiment: text("sentiment").notNull(),
+  sector: text("sector").notNull(),
+  riskType: text("risk_type").notNull(),
+});
+
 export const insertRiskSectorSchema = createInsertSchema(riskSectors).omit({ id: true });
 export const insertRiskMetricSchema = createInsertSchema(riskMetrics).omit({ id: true });
 export const insertRiskAlertSchema = createInsertSchema(riskAlerts).omit({ id: true });
 export const insertHeatmapDataSchema = createInsertSchema(heatmapData).omit({ id: true });
+export const insertMarketNewsSchema = createInsertSchema(marketNews).omit({ id: true });
 
 export type InsertRiskSector = z.infer<typeof insertRiskSectorSchema>;
 export type RiskSector = typeof riskSectors.$inferSelect;
@@ -53,6 +67,8 @@ export type InsertRiskAlert = z.infer<typeof insertRiskAlertSchema>;
 export type RiskAlert = typeof riskAlerts.$inferSelect;
 export type InsertHeatmapData = z.infer<typeof insertHeatmapDataSchema>;
 export type HeatmapData = typeof heatmapData.$inferSelect;
+export type InsertMarketNews = z.infer<typeof insertMarketNewsSchema>;
+export type MarketNews = typeof marketNews.$inferSelect;
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
