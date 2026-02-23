@@ -98,7 +98,7 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
 
       <div className="overflow-x-auto sf-grid-container">
         <div className="min-w-[600px]">
-          <div className="grid gap-[2px]" style={{ gridTemplateColumns: `200px repeat(${RISK_DIMENSIONS.length}, 1fr)` }}>
+          <div className="grid gap-[2px]" style={{ gridTemplateColumns: `260px repeat(${RISK_DIMENSIONS.length}, 1fr)` }}>
             <div className="p-2" />
             {RISK_DIMENSIONS.map((dim) => (
               <div key={dim} className="p-2 text-center">
@@ -109,7 +109,7 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
             {sectorNames.map((sector) => (
               <Fragment key={sector}>
                 <div
-                  className={`p-2 flex items-center text-xs font-medium truncate rounded transition-colors sf-sector-label ${
+                  className={`p-2 flex items-center text-xs font-medium rounded transition-colors sf-sector-label whitespace-normal leading-tight ${
                     selectedSector && sectors.find(s => s.name === sector)?.id === selectedSector
                       ? "sf-sector-selected"
                       : ""
@@ -172,7 +172,6 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
         </div>
       </div>
 
-      <div className="sf-scanline" />
     </div>
   );
 }

@@ -398,24 +398,6 @@
   50% { opacity: 0.5; filter: drop-shadow(0 0 2px rgba(0, 229, 255, 0.3)); }
 }
 
-.sf-scanline {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.3), rgba(0, 229, 255, 0.6), rgba(0, 229, 255, 0.3), transparent);
-  animation: sf-scan 4s linear infinite;
-  pointer-events: none;
-  z-index: 20;
-}
-
-@keyframes sf-scan {
-  0% { top: 0; opacity: 0; }
-  5% { opacity: 1; }
-  95% { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
-}
 
 .sf-grid-container {
   position: relative;
@@ -432,7 +414,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sf-pulse-icon { animation: none; }
-  .sf-scanline { animation: none; display: none; }
   .sf-cell { transition-duration: 0.01ms; }
   .sf-summary-item { transition-duration: 0.01ms; }
 }
