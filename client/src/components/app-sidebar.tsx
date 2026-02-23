@@ -65,14 +65,11 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <div className="flex items-center gap-2">
+                <SidebarMenuButton asChild isActive={location === "/status"}>
+                  <Link href="/status">
                     <Activity className="w-4 h-4" />
                     <span>System Status</span>
-                    <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0">
-                      Live
-                    </Badge>
-                  </div>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
