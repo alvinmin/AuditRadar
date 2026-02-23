@@ -29,7 +29,8 @@ A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualiz
 3. **Regulatory adjustments**: Parse impacted areas/processes via keyword matching to categories and dimensions. Risk raised/lowered determines direction (±3 per regulation), clamped to ±8.
 4. **News adjustments**: Map article category → audit unit category, risk type → dimensions. Sentiment scoring (Negative=+2, Neutral=0, Positive=-1), averaged and scaled ×3, clamped to ±8.
 5. **Final**: `Updated Score = clamp(Base + Incident + Regulatory + News, 0, 100)`
-6. **Alerts**: Generated when the average absolute score change (sum of incident + regulatory + news adjustments) across all 8 dimensions ≥ 5 points. Severity: Critical (≥10 pts), High (7-9.9 pts), Medium (5-6.9 pts). Each alert includes a driver breakdown showing which adjustments (Incidents, Regulatory, News) contributed to the top 3 most-changed dimensions.
+6. **Predicted Score** (Weighted Momentum): `Predicted = clamp(Current + (News×1.5 + Regulatory×1.2 + Incident×0.8) × 0.3, 0, 100)`. News gets highest weight (trends snowball), regulatory moderate (impact compounds), incidents lowest (get remediated). Confidence derived from signal consistency: all sources same direction → 0.75-0.90; mixed signals → 0.45-0.70.
+7. **Alerts**: Generated when the average absolute score change (sum of incident + regulatory + news adjustments) across all 8 dimensions ≥ 5 points. Severity: Critical (≥10 pts), High (7-9.9 pts), Medium (5-6.9 pts). Each alert includes a driver breakdown showing which adjustments (Incidents, Regulatory, News) contributed to the top 3 most-changed dimensions.
 
 ## Key Features
 - Interactive risk heatmap: 28 auditable units (vertical) x 8 risk dimensions (horizontal) with color-coded severity

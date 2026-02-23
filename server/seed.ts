@@ -382,20 +382,28 @@ export async function seedDatabase() {
       totalAdjustedScore += adjustedScore;
       dimChanges.push({ dim, incAdj: inc, regAdj_val: reg, newsAdj_val: news, totalChange });
 
-      const prevScaled = scaleScore(Math.max(1, Math.min(5, rawScore + (Math.random() * 1.2 - 0.6))));
-      const trend = adjustedScore > prevScaled ? "up" : adjustedScore < prevScaled ? "down" : "stable";
+      const prevScaled = baseScaled;
+      const trend = totalChange > 0.5 ? "up" : totalChange < -0.5 ? "down" : "stable";
 
-      const predictedRaw = Math.max(1, Math.min(5, rawScore + (Math.random() * 0.8 - 0.2)));
-      const predictedBase = scaleScore(predictedRaw);
-      const predictedAdj = mergeAdjustments(predictedBase, category, dim, incidentAdj, regAdj, newsAdj);
-      const confidence = 0.7 + Math.random() * 0.25;
+      const DECAY = 0.3;
+      const momentum = (news * 1.5 + reg * 1.2 + inc * 0.8) * DECAY;
+      const predictedScore = clamp(Math.round(adjustedScore + momentum), 0, 100);
+
+      const sources = [inc, reg, news].filter(v => Math.abs(v) > 0);
+      const allPositive = sources.length > 0 && sources.every(v => v > 0);
+      const allNegative = sources.length > 0 && sources.every(v => v < 0);
+      const signalConsistency = allPositive || allNegative;
+      const signalStrength = sources.length / 3;
+      const confidence = signalConsistency
+        ? clamp(0.75 + signalStrength * 0.15, 0.7, 0.95)
+        : clamp(0.55 + signalStrength * 0.10, 0.45, 0.70);
 
       await storage.createMetric({
         sectorId: created.id,
         metricType: dim,
         score: adjustedScore,
         previousScore: prevScaled,
-        predictedScore: predictedAdj,
+        predictedScore: predictedScore,
         confidence,
       });
 
