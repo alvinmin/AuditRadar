@@ -5,6 +5,7 @@ import { RiskSummaryCards } from "@/components/risk-summary-cards";
 import { RiskTrendChart } from "@/components/risk-trend-chart";
 import { SectorDetailPanel } from "@/components/sector-detail-panel";
 import { NewsFeed } from "@/components/news-feed";
+import auditRadarLogo from "@assets/Audit_Radar_Logo_1771881298407.png";
 import type { RiskSector, RiskMetric, HeatmapData, MarketNews } from "@shared/schema";
 
 export default function Dashboard() {
@@ -42,11 +43,14 @@ export default function Dashboard() {
   return (
     <div className="h-full overflow-auto">
       <div className="p-4 sm:p-6 space-y-5 max-w-[1600px] mx-auto">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Audit Radar</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Predictive risk monitoring powered by market news intelligence
-          </p>
+        <div className="flex items-center gap-3">
+          <img src={auditRadarLogo} alt="Audit Radar" className="w-12 h-12 object-contain" data-testid="img-logo" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Audit Radar</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Predictive risk monitoring powered by market news intelligence
+            </p>
+          </div>
         </div>
 
         <RiskSummaryCards metrics={summaryMetrics} isLoading={isLoading} />
