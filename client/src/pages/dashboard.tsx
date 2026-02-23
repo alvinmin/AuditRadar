@@ -43,7 +43,7 @@ export default function Dashboard() {
     <div className="h-full overflow-auto">
       <div className="p-4 sm:p-6 space-y-5 max-w-[1600px] mx-auto">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Risk Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Audit Radar</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Predictive risk monitoring powered by market news intelligence
           </p>

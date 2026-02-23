@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
 
 const navItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  { title: "Audit Radar", url: "/", icon: LayoutDashboard },
   { title: "Heatmap", url: "/heatmap", icon: Map },
   { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Alerts", url: "/alerts", icon: Bell },
