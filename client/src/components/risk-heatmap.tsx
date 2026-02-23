@@ -98,7 +98,7 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
 
       <div className="overflow-x-auto sf-grid-container">
         <div className="min-w-[600px]">
-          <div className="grid gap-[2px]" style={{ gridTemplateColumns: `260px repeat(${RISK_DIMENSIONS.length}, 1fr)` }}>
+          <div className="grid gap-[2px]" style={{ gridTemplateColumns: `260px repeat(${RISK_DIMENSIONS.length}, minmax(0, 1fr))` }}>
             <div className="p-2" />
             {RISK_DIMENSIONS.map((dim) => (
               <div key={dim} className="p-2 text-center">
@@ -130,7 +130,7 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
                         <button
                           data-testid={`heatmap-cell-${sector.toLowerCase().replace(/\s+/g, '-')}-${dim.toLowerCase()}`}
                           className={`
-                            relative p-2.5 rounded cursor-pointer transition-all duration-300 sf-cell
+                            relative rounded cursor-pointer transition-all duration-300 sf-cell w-full aspect-square flex items-center justify-center
                             ${isHovered ? "scale-[1.08] z-10" : ""}
                             ${selectedSector && sectorObj?.id === selectedSector ? "ring-1 ring-cyan-400/60" : ""}
                           `}
