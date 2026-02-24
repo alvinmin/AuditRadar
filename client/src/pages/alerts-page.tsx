@@ -283,7 +283,7 @@ export default function AlertsPage() {
                                 {componentScores.map((comp, i) => (
                                   <div key={i} className="flex items-center gap-1.5 text-xs bg-muted/50 rounded px-2 py-1">
                                     <span className="font-medium">{comp.label}</span>
-                                    <span className={`font-bold ${parseInt(comp.value) >= 75 ? "text-red-500" : parseInt(comp.value) >= 50 ? "text-amber-500" : "text-green-500"}`}>
+                                    <span className={`font-bold ${parseInt(comp.value) >= 71 ? "text-red-500" : parseInt(comp.value) >= 31 ? "text-amber-500" : "text-green-500"}`}>
                                       {comp.value}
                                     </span>
                                   </div>

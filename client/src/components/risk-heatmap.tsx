@@ -21,23 +21,23 @@ interface RiskHeatmapProps {
 const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Fraud", "Data/Tech", "Reputation"];
 
 function getNeonColor(value: number): string {
-  if (value >= 90) return "rgba(255, 0, 128, 0.85)";
-  if (value >= 75) return "rgba(200, 0, 200, 0.75)";
-  if (value >= 40) return "rgba(100, 80, 255, 0.55)";
+  if (value > 90) return "rgba(255, 0, 128, 0.85)";
+  if (value >= 71) return "rgba(200, 0, 200, 0.75)";
+  if (value >= 31) return "rgba(100, 80, 255, 0.55)";
   return "rgba(0, 255, 200, 0.40)";
 }
 
 function getNeonGlow(value: number): string {
-  if (value >= 90) return "0 0 12px rgba(255, 0, 128, 0.6), 0 0 24px rgba(255, 0, 128, 0.3), inset 0 0 8px rgba(255, 0, 128, 0.2)";
-  if (value >= 75) return "0 0 10px rgba(200, 0, 200, 0.5), 0 0 20px rgba(200, 0, 200, 0.2)";
-  if (value >= 40) return "0 0 6px rgba(100, 80, 255, 0.3)";
+  if (value > 90) return "0 0 12px rgba(255, 0, 128, 0.6), 0 0 24px rgba(255, 0, 128, 0.3), inset 0 0 8px rgba(255, 0, 128, 0.2)";
+  if (value >= 71) return "0 0 10px rgba(200, 0, 200, 0.5), 0 0 20px rgba(200, 0, 200, 0.2)";
+  if (value >= 31) return "0 0 6px rgba(100, 80, 255, 0.3)";
   return "0 0 4px rgba(0, 255, 200, 0.2)";
 }
 
 function getNeonBorder(value: number): string {
-  if (value >= 90) return "1px solid rgba(255, 0, 128, 0.6)";
-  if (value >= 75) return "1px solid rgba(200, 0, 200, 0.5)";
-  if (value >= 40) return "1px solid rgba(100, 80, 255, 0.3)";
+  if (value > 90) return "1px solid rgba(255, 0, 128, 0.6)";
+  if (value >= 71) return "1px solid rgba(200, 0, 200, 0.5)";
+  if (value >= 31) return "1px solid rgba(100, 80, 255, 0.3)";
   return "1px solid rgba(0, 255, 200, 0.2)";
 }
 
@@ -48,9 +48,9 @@ function getTrendIcon(trend: string) {
 }
 
 function getRiskLabel(value: number): string {
-  if (value >= 90) return "Critical";
-  if (value >= 75) return "High";
-  if (value >= 40) return "Medium";
+  if (value > 90) return "Critical";
+  if (value >= 71) return "High";
+  if (value >= 31) return "Medium";
   return "Low";
 }
 

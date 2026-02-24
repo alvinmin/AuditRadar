@@ -91,9 +91,9 @@ function scaleScore(raw: number): number {
 }
 
 function getSeverityFromScore(score: number): string {
-  if (score >= 90) return "critical";
-  if (score >= 75) return "high";
-  if (score >= 40) return "medium";
+  if (score > 90) return "critical";
+  if (score >= 71) return "high";
+  if (score >= 31) return "medium";
   return "low";
 }
 
@@ -541,7 +541,7 @@ export async function seedDatabase() {
     const absScoreChange = Math.abs(scoreChange);
 
     if (absScoreChange >= 5 || avgFinalScore >= 70) {
-      const severity = avgFinalScore >= 85 ? "critical" : avgFinalScore >= 70 ? "high" : absScoreChange >= 10 ? "high" : "medium";
+      const severity = avgFinalScore > 90 ? "critical" : avgFinalScore >= 71 ? "high" : absScoreChange >= 10 ? "high" : "medium";
       const sevLabel = severity.charAt(0).toUpperCase() + severity.slice(1);
 
       const componentBreakdown = [

@@ -73,7 +73,7 @@ export default function AnalyticsPage() {
         ...m,
         sectorName,
         label: `${shortName} · ${m.metricType}`,
-        barColor: m.score >= 90 ? "#ef4444" : m.score >= 75 ? "#f97316" : m.score >= 40 ? "#eab308" : "#22c55e",
+        barColor: m.score > 90 ? "#ef4444" : m.score >= 71 ? "#f97316" : m.score >= 31 ? "#eab308" : "#22c55e",
       };
     });
 

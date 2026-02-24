@@ -33,9 +33,9 @@ interface ScatterPoint {
 }
 
 function getQuadrantLabel(x: number, y: number): { label: string; color: string; description: string } {
-  if (x >= 0 && y >= 75) return { label: "High & Rising", color: "rgba(255, 0, 128, 0.85)", description: "High risk with increasing trend — immediate attention needed" };
-  if (x < 0 && y >= 75) return { label: "High & Declining", color: "rgba(200, 0, 200, 0.75)", description: "High risk but improving — monitor recovery progress" };
-  if (x >= 0 && y < 75) return { label: "Moderate & Rising", color: "rgba(100, 80, 255, 0.7)", description: "Lower risk but increasing — watch for escalation" };
+  if (x >= 0 && y >= 71) return { label: "High & Rising", color: "rgba(255, 0, 128, 0.85)", description: "High risk with increasing trend — immediate attention needed" };
+  if (x < 0 && y >= 71) return { label: "High & Declining", color: "rgba(200, 0, 200, 0.75)", description: "High risk but improving — monitor recovery progress" };
+  if (x >= 0 && y < 71) return { label: "Moderate & Rising", color: "rgba(100, 80, 255, 0.7)", description: "Lower risk but increasing — watch for escalation" };
   return { label: "Moderate & Declining", color: "rgba(0, 255, 200, 0.6)", description: "Lower risk and decreasing — stable position" };
 }
 
@@ -106,10 +106,10 @@ export default function QuadrantPage() {
   }, [allScatterData, dimensionFilter]);
 
   const quadrantCounts = {
-    highRising: scatterData.filter(d => d.x >= 0 && d.y >= 75).length,
-    highDeclining: scatterData.filter(d => d.x < 0 && d.y >= 75).length,
-    modRising: scatterData.filter(d => d.x >= 0 && d.y < 75).length,
-    modDeclining: scatterData.filter(d => d.x < 0 && d.y < 75).length,
+    highRising: scatterData.filter(d => d.x >= 0 && d.y >= 71).length,
+    highDeclining: scatterData.filter(d => d.x < 0 && d.y >= 71).length,
+    modRising: scatterData.filter(d => d.x >= 0 && d.y < 71).length,
+    modDeclining: scatterData.filter(d => d.x < 0 && d.y < 71).length,
   };
 
   const xValues = scatterData.map(d => d.x);
@@ -212,7 +212,7 @@ export default function QuadrantPage() {
                   opacity={0.6}
                 />
                 <ReferenceLine
-                  y={75}
+                  y={71}
                   stroke="hsl(var(--muted-foreground))"
                   strokeDasharray="6 4"
                   strokeWidth={1.5}
@@ -240,10 +240,10 @@ export default function QuadrantPage() {
           <h3 className="text-sm font-semibold mb-3">Unit × Dimension Details</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
-              { title: "High & Rising", filter: (d: ScatterPoint) => d.x >= 0 && d.y >= 75, color: "rgba(255, 0, 128, 0.85)" },
-              { title: "High & Declining", filter: (d: ScatterPoint) => d.x < 0 && d.y >= 75, color: "rgba(200, 0, 200, 0.75)" },
-              { title: "Moderate & Rising", filter: (d: ScatterPoint) => d.x >= 0 && d.y < 75, color: "rgba(100, 80, 255, 0.7)" },
-              { title: "Moderate & Declining", filter: (d: ScatterPoint) => d.x < 0 && d.y < 75, color: "rgba(0, 255, 200, 0.6)" },
+              { title: "High & Rising", filter: (d: ScatterPoint) => d.x >= 0 && d.y >= 71, color: "rgba(255, 0, 128, 0.85)" },
+              { title: "High & Declining", filter: (d: ScatterPoint) => d.x < 0 && d.y >= 71, color: "rgba(200, 0, 200, 0.75)" },
+              { title: "Moderate & Rising", filter: (d: ScatterPoint) => d.x >= 0 && d.y < 71, color: "rgba(100, 80, 255, 0.7)" },
+              { title: "Moderate & Declining", filter: (d: ScatterPoint) => d.x < 0 && d.y < 71, color: "rgba(0, 255, 200, 0.6)" },
             ].map(q => {
               const items = scatterData.filter(q.filter).sort((a, b) => b.y - a.y);
               const displayItems = items.slice(0, 15);

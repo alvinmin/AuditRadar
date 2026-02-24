@@ -127,9 +127,9 @@ function getSeverityColor(severity: string) {
 }
 
 function getScoreColor(score: number) {
-  if (score >= 90) return "text-red-600";
-  if (score >= 75) return "text-orange-500";
-  if (score >= 40) return "text-yellow-600";
+  if (score > 90) return "text-red-600";
+  if (score >= 71) return "text-orange-500";
+  if (score >= 31) return "text-yellow-600";
   return "text-green-600";
 }
 
@@ -455,7 +455,7 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
               {dim.operationalMetricDrivers.map((m, i) => (
                 <div key={i} className="flex items-center justify-between text-xs border rounded-md px-2 py-1.5 bg-muted/30" data-testid={`op-metric-${m.metric.replace(/\s+/g, "-").toLowerCase()}`}>
                   <span className="text-muted-foreground">{m.metric}</span>
-                  <span className={`font-mono font-medium ${m.value >= 70 ? "text-red-500" : m.value >= 40 ? "text-amber-500" : "text-green-500"}`}>
+                  <span className={`font-mono font-medium ${m.value >= 71 ? "text-red-500" : m.value >= 31 ? "text-amber-500" : "text-green-500"}`}>
                     {m.value}
                   </span>
                 </div>
