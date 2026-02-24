@@ -130,7 +130,7 @@ function getScoreColor(score: number) {
 const WATERFALL_COLORS: Record<string, string> = {
   "Baseline (30%)": "#6366f1",
   "Control Health (25%)": "#8b5cf6",
-  "Audit Issues (20%)": "#f59e0b",
+  "Issues (20%)": "#f59e0b",
   "Business/External (15%)": "#3b82f6",
   "Operational Risk (10%)": "#ef4444",
   "Final Score": "#10b981",
@@ -264,7 +264,7 @@ function WaterfallChart({ dim }: { dim: DimensionDriver }) {
     data.push({ name: "Control Health (25%)", invisible: running, value: ch, displayValue: ch, isTotal: false });
     running += ch;
 
-    data.push({ name: "Audit Issues (20%)", invisible: running, value: ai, displayValue: ai, isTotal: false });
+    data.push({ name: "Issues (20%)", invisible: running, value: ai, displayValue: ai, isTotal: false });
     running += ai;
 
     data.push({ name: "Business/External (15%)", invisible: running, value: be, displayValue: be, isTotal: false });
@@ -397,7 +397,7 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
           <AccordionTrigger className="py-2 text-xs hover:no-underline" data-testid={`trigger-issues-${dim.dimension.replace(/[\s/]/g, "-")}`}>
             <div className="flex items-center gap-1.5">
               <ClipboardList className="w-3.5 h-3.5 text-amber-500" />
-              <span>{dim.auditIssueDrivers.length} Audit Issue{dim.auditIssueDrivers.length > 1 ? "s" : ""}</span>
+              <span>{dim.auditIssueDrivers.length} Issue{dim.auditIssueDrivers.length > 1 ? "s" : ""}</span>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-500 ml-1">
                 {dim.auditIssueTrendContribution.toFixed(1)} pts
               </Badge>
@@ -572,7 +572,7 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
 const COMPONENT_META = [
   { key: "baseline", label: "Baseline Risk", weight: "30%", color: "bg-indigo-500", textColor: "text-indigo-600" },
   { key: "controlHealth", label: "Control Health", weight: "25%", color: "bg-purple-500", textColor: "text-purple-600" },
-  { key: "auditIssueTrend", label: "Audit Issues", weight: "20%", color: "bg-amber-500", textColor: "text-amber-600" },
+  { key: "auditIssueTrend", label: "Issues", weight: "20%", color: "bg-amber-500", textColor: "text-amber-600" },
   { key: "businessExternal", label: "Business/External", weight: "15%", color: "bg-blue-500", textColor: "text-blue-600" },
   { key: "operationalRisk", label: "Operational Risk", weight: "10%", color: "bg-red-500", textColor: "text-red-600" },
 ];

@@ -620,7 +620,7 @@ export async function seedDatabase() {
       const componentBreakdown = [
         `Baseline: ${Math.round(baselineAvg)}`,
         `Control Health: ${Math.round(controlHealth)}`,
-        `Audit Issues: ${Math.round(auditIssueTrend)}`,
+        `Issues: ${Math.round(auditIssueTrend)}`,
         `Business/External: ${Math.round(businessExternal)}`,
         `Operational Risk: ${Math.round(operationalRisk)}`,
       ].join(" | ");

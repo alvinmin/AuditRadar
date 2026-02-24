@@ -144,7 +144,7 @@ export default function AlertsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4 flex items-center justify-center" data-testid="donut-chart-card">
             <div className="relative w-[180px] h-[180px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -178,7 +178,7 @@ export default function AlertsPage() {
             return (
               <Card
                 key={sev}
-                className={`p-4 cursor-pointer transition-all hover:shadow-md ${severityFilter === sev ? "ring-2 ring-primary" : ""}`}
+                className={`p-4 cursor-pointer transition-all hover:shadow-md flex items-center ${severityFilter === sev ? "ring-2 ring-primary" : ""}`}
                 onClick={() => setSeverityFilter(severityFilter === sev ? "all" : sev)}
                 data-testid={`filter-card-${sev}`}
               >
@@ -218,7 +218,7 @@ export default function AlertsPage() {
               </div>
             </Card>
           ) : (
-            sortedAlerts.map((alert) => {
+            sortedAlerts.map((alert, alertIndex) => {
               const config = severityConfig[alert.severity] || severityConfig.medium;
               const isExpanded = expandedAlerts.has(alert.id);
               const avgScore = extractAvgScore(alert.title);
@@ -239,6 +239,9 @@ export default function AlertsPage() {
                         onClick={() => toggleExpanded(alert.id)}
                         data-testid={`button-expand-${alert.id}`}
                       >
+                        <span className="text-sm font-bold text-muted-foreground w-6 shrink-0" data-testid={`text-index-${alert.id}`}>
+                          {alertIndex + 1}.
+                        </span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-semibold truncate" data-testid={`text-sector-${alert.id}`}>
