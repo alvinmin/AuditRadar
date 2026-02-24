@@ -305,93 +305,19 @@ function computeBusinessExternalScores(
   return result;
 }
 
-function computeOperationalRiskScores(
-  incidentRows: IncidentRow[],
-  vendorRows: VendorRow[],
-  cveRows: CveRow[],
-  unitNames: string[],
-): Record<string, number> {
-  const unitIncidentScores: Record<string, number> = {};
-
-  for (const inc of incidentRows) {
-    const sev = SEVERITY_WEIGHT[inc["Risk Severity"]] || 1;
-    const pri = PRIORITY_WEIGHT[inc.Priority] || 1;
-    const impact = sev * pri;
-
-    const matchedUnits = BIZ_AREA_TO_UNITS[inc["Impacted Business Areas"]] || [];
-    for (const unit of matchedUnits) {
-      if (!unitNames.includes(unit)) continue;
-      unitIncidentScores[unit] = (unitIncidentScores[unit] || 0) + impact;
-    }
-  }
-
-  let maxIncidentScore = 0;
-  for (const val of Object.values(unitIncidentScores)) {
-    if (val > maxIncidentScore) maxIncidentScore = val;
-  }
-
-  const vendorToCves = new Map<string, { total: number; ransomware: number }>();
-  for (const cve of cveRows) {
-    const vendorLower = cve.vendorProject.toLowerCase().trim();
-    if (!vendorToCves.has(vendorLower)) {
-      vendorToCves.set(vendorLower, { total: 0, ransomware: 0 });
-    }
-    const entry = vendorToCves.get(vendorLower)!;
-    entry.total++;
-    if (cve.knownRansomwareCampaignUse === "Known") entry.ransomware++;
-  }
-
-  const unitCyberScores: Record<string, number> = {};
-  for (const vr of vendorRows) {
-    const unitName = vr["Auditable Unit"].trim();
-    if (!unitNames.includes(unitName)) continue;
-    const vendors = vr.Vendors.split(",").map(v => v.trim());
-    let totalWeightedScore = 0;
-    let matchedVendors = 0;
-
-    for (const vendor of vendors) {
-      const vendorLower = vendor.toLowerCase();
-      let matchedTotal = 0;
-      let matchedRansomware = 0;
-      let found = false;
-      vendorToCves.forEach((stats, cveVendor) => {
-        if (found) return;
-        if (cveVendor.includes(vendorLower) || vendorLower.includes(cveVendor)) {
-          matchedTotal = stats.total; matchedRansomware = stats.ransomware; found = true; return;
-        }
-        const vendorWords = vendorLower.split(/\s+/);
-        const cveWords = cveVendor.split(/\s+/);
-        if (vendorWords.length > 0 && cveWords.some((w: string) => vendorWords.includes(w) && w.length > 3)) {
-          matchedTotal = stats.total; matchedRansomware = stats.ransomware; found = true; return;
-        }
-      });
-      if (found) {
-        matchedVendors++;
-        totalWeightedScore += matchedTotal + matchedRansomware * 2;
-      }
-    }
-
-    if (matchedVendors > 0) {
-      const avgScore = totalWeightedScore / vendors.length;
-      unitCyberScores[unitName] = clamp(avgScore / 40, 0, 1) * 100;
-    }
-  }
-
-  let maxCyberScore = 0;
-  for (const val of Object.values(unitCyberScores)) {
-    if (val > maxCyberScore) maxCyberScore = val;
-  }
+function loadOperationalRiskScores(XLSX: any): Record<string, number> {
+  const opMetricsPath = path.resolve("attached_assets/predictive_heatmap_dataset_1771962971302.xlsx");
+  const opWb = XLSX.readFile(opMetricsPath);
+  const opSheet = opWb.Sheets["Operational_Metrics"];
+  const opRows: any[][] = XLSX.utils.sheet_to_json(opSheet, { header: 1 });
 
   const result: Record<string, number> = {};
-  for (const unit of unitNames) {
-    const incidentNorm = maxIncidentScore > 0
-      ? ((unitIncidentScores[unit] || 0) / maxIncidentScore) * 100
-      : 0;
-    const cyberNorm = maxCyberScore > 0
-      ? ((unitCyberScores[unit] || 0) / maxCyberScore) * 100
-      : 0;
-
-    result[unit] = Math.round(clamp((incidentNorm * 0.4 + cyberNorm * 0.6), 0, 100) * 10) / 10;
+  for (let i = 1; i < opRows.length; i++) {
+    const unitName = String(opRows[i]?.[0] || "").trim();
+    const predictiveScore = Number(opRows[i]?.[17]) || 0;
+    if (unitName) {
+      result[unitName] = clamp(Math.round(predictiveScore * 10) / 10, 0, 100);
+    }
   }
   return result;
 }
@@ -500,7 +426,8 @@ export async function seedDatabase() {
   const controlHealthScores = computeControlHealthScores(prcRows);
   const auditIssueTrendScores = computeAuditIssueTrendScores(issueRows, unitNames);
   const businessExternalScores = computeBusinessExternalScores(newsRows, regRows, unitNames);
-  const operationalRiskScores = computeOperationalRiskScores(incidentRows, vendorRows, cveRows, unitNames);
+  const operationalRiskScores = loadOperationalRiskScores(XLSX);
+  console.log(`Loaded ${Object.keys(operationalRiskScores).length} operational risk scores from Operational_Metrics`);
 
   console.log("Sample component scores for first 3 units:");
   for (const name of unitNames.slice(0, 3)) {

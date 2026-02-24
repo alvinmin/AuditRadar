@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertTriangle, TrendingUp, TrendingDown, Minus, FileText, Shield, Newspaper, ChevronRight, Bug, CheckCircle, ClipboardList } from "lucide-react";
+import { AlertTriangle, TrendingUp, TrendingDown, Minus, FileText, Shield, Newspaper, ChevronRight, CheckCircle, ClipboardList } from "lucide-react";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -74,6 +74,11 @@ interface CyberDriver {
   ransomware: boolean;
 }
 
+interface OperationalMetricDriver {
+  metric: string;
+  value: number;
+}
+
 interface DimensionDriver {
   dimension: string;
   baseScore: number;
@@ -89,6 +94,7 @@ interface DimensionDriver {
   regulatoryDrivers: RegDriver[];
   newsDrivers: NewsDriver[];
   cyberDrivers: CyberDriver[];
+  operationalMetricDrivers: OperationalMetricDriver[];
   baselineAction: string;
   controlHealthAction: string;
   auditIssueAction: string;
@@ -341,7 +347,7 @@ function WaterfallChart({ dim }: { dim: DimensionDriver }) {
 }
 
 function DriverDetails({ dim }: { dim: DimensionDriver }) {
-  const hasDrivers = (dim.controlHealthDrivers?.length > 0) || (dim.auditIssueDrivers?.length > 0) || (dim.incidentDrivers?.length > 0) || (dim.regulatoryDrivers?.length > 0) || (dim.newsDrivers?.length > 0) || (dim.cyberDrivers?.length > 0);
+  const hasDrivers = (dim.controlHealthDrivers?.length > 0) || (dim.auditIssueDrivers?.length > 0) || (dim.operationalMetricDrivers?.length > 0) || (dim.regulatoryDrivers?.length > 0) || (dim.newsDrivers?.length > 0);
 
   if (!hasDrivers) {
     return (
@@ -433,31 +439,33 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
         </AccordionItem>
       )}
 
-      {dim.incidentDrivers && dim.incidentDrivers.length > 0 && (
-        <AccordionItem value="incidents" className="border-b-0">
-          <AccordionTrigger className="py-2 text-xs hover:no-underline" data-testid={`trigger-incidents-${dim.dimension.replace(/[\s/]/g, "-")}`}>
+      {dim.operationalMetricDrivers && dim.operationalMetricDrivers.length > 0 && (
+        <AccordionItem value="operational-metrics" className="border-b-0">
+          <AccordionTrigger className="py-2 text-xs hover:no-underline" data-testid={`trigger-op-metrics-${dim.dimension.replace(/[\s/]/g, "-")}`}>
             <div className="flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-orange-500" />
-              <span>{dim.incidentDrivers.length} Incident{dim.incidentDrivers.length > 1 ? "s" : ""}</span>
+              <span>{dim.operationalMetricDrivers.length} Operational Metrics</span>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-orange-500 ml-1">
                 part of Operational Risk
               </Badge>
             </div>
           </AccordionTrigger>
           <AccordionContent>
-            <div className="space-y-2 pl-5">
-              {dim.incidentDrivers.map((inc) => (
-                <div key={inc.id} className="text-xs border rounded-md p-2 bg-muted/30">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{inc.id}</span>
-                    <div className="flex gap-1">
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">{inc.severity}</Badge>
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">{inc.priority}</Badge>
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground mt-0.5">{inc.process} (impact: {inc.impact}/16)</p>
+            <div className="space-y-1 pl-5">
+              {dim.operationalMetricDrivers.map((m, i) => (
+                <div key={i} className="flex items-center justify-between text-xs border rounded-md px-2 py-1.5 bg-muted/30" data-testid={`op-metric-${m.metric.replace(/\s+/g, "-").toLowerCase()}`}>
+                  <span className="text-muted-foreground">{m.metric}</span>
+                  <span className={`font-mono font-medium ${m.value >= 70 ? "text-red-500" : m.value >= 40 ? "text-amber-500" : "text-green-500"}`}>
+                    {m.value}
+                  </span>
                 </div>
               ))}
+              {dim.operationalRiskAction && (
+                <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-orange-500/5 border border-orange-500/10">
+                  <ChevronRight className="w-3.5 h-3.5 text-orange-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-orange-700 dark:text-orange-400">{dim.operationalRiskAction}</p>
+                </div>
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -527,44 +535,6 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
         </AccordionItem>
       )}
 
-      {dim.cyberDrivers && dim.cyberDrivers.length > 0 && (
-        <AccordionItem value="cyber" className="border-b-0">
-          <AccordionTrigger className="py-2 text-xs hover:no-underline" data-testid={`trigger-cyber-${dim.dimension.replace(/[\s/]/g, "-")}`}>
-            <div className="flex items-center gap-1.5">
-              <Bug className="w-3.5 h-3.5 text-red-500" />
-              <span>{dim.cyberDrivers.length} CVE Vulnerabilit{dim.cyberDrivers.length > 1 ? "ies" : "y"}</span>
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-red-500 ml-1">
-                part of Operational Risk
-              </Badge>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <div className="space-y-2 pl-5">
-              {dim.cyberDrivers.map((cve, i) => (
-                <div key={i} className="text-xs border rounded-md p-2 bg-muted/30">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium font-mono">{cve.cveId}</span>
-                    <div className="flex gap-1">
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">{cve.vendor}</Badge>
-                      {cve.ransomware && (
-                        <Badge variant="outline" className="text-[10px] px-1 py-0 text-red-500 border-red-500/30">Ransomware</Badge>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground mt-0.5 line-clamp-2">{cve.name}</p>
-                  <p className="text-muted-foreground/70 mt-0.5">{cve.product}</p>
-                </div>
-              ))}
-              {dim.operationalRiskAction && (
-                <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-red-500/5 border border-red-500/10">
-                  <ChevronRight className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
-                  <p className="text-xs text-red-700 dark:text-red-400">{dim.operationalRiskAction}</p>
-                </div>
-              )}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
     </Accordion>
   );
 }

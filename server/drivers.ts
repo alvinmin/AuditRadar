@@ -273,6 +273,11 @@ export interface CyberDriver {
   ransomware: boolean;
 }
 
+export interface OperationalMetricDriver {
+  metric: string;
+  value: number;
+}
+
 export interface DimensionDriver {
   dimension: string;
   baseScore: number;
@@ -288,6 +293,7 @@ export interface DimensionDriver {
   regulatoryDrivers: RegDriver[];
   newsDrivers: NewsDriver[];
   cyberDrivers: CyberDriver[];
+  operationalMetricDrivers: OperationalMetricDriver[];
   baselineAction: string;
   controlHealthAction: string;
   auditIssueAction: string;
@@ -359,10 +365,14 @@ async function loadData() {
   const issueWb = XLSX.readFile(issuePath);
   const issueRows: IssueRow[] = XLSX.utils.sheet_to_json(issueWb.Sheets["Sheet1"]);
 
+  const opMetricsPath = path.resolve("attached_assets/predictive_heatmap_dataset_1771962971302.xlsx");
+  const opWb = XLSX.readFile(opMetricsPath);
+  const opMetricsRows: any[][] = XLSX.utils.sheet_to_json(opWb.Sheets["Operational_Metrics"], { header: 1 });
+
   const dataRows = auditRows.slice(3).filter((r: any[]) => r[2]);
   const unitNames = dataRows.map((r: any[]) => String(r[2]));
 
-  cachedData = { auditRows, incidents, regs, news, vendors, cves, prcRows, issueRows, unitNames };
+  cachedData = { auditRows, incidents, regs, news, vendors, cves, prcRows, issueRows, unitNames, opMetricsRows };
   return cachedData;
 }
 
@@ -487,134 +497,34 @@ function computeUnitBusinessExternalScore(
   return { score, newsDrivers: matchedNews.slice(0, 5), regulatoryDrivers: matchedRegs };
 }
 
-function computeUnitOperationalRiskScore(
-  incidents: IncidentRow[], vendors: VendorRow[], cves: CveRow[], unitName: string, unitNames: string[]
-): { score: number; incidentDrivers: IncidentDriver[]; cyberDrivers: CyberDriver[] } {
-  const matchedIncidents: IncidentDriver[] = [];
-  let unitIncidentScore = 0;
-
-  for (const inc of incidents) {
-    const matchedUnits = BIZ_AREA_TO_UNITS[inc["Impacted Business Areas"]] || [];
-    if (matchedUnits.includes(unitName)) {
-      const sev = SEVERITY_WEIGHT[inc["Risk Severity"]] || 1;
-      const pri = PRIORITY_WEIGHT[inc.Priority] || 1;
-      const impact = sev * pri;
-      unitIncidentScore += impact;
-      matchedIncidents.push({
-        id: inc["Incident ID"],
-        title: inc["Incident Title"],
-        severity: inc["Risk Severity"],
-        priority: inc.Priority,
-        impact,
-        process: inc["Impacted Business Process"],
-      });
+function loadUnitOperationalRiskScore(
+  opMetricsRows: any[][], unitName: string
+): { score: number; metricDrivers: OperationalMetricDriver[] } {
+  const headerRow = opMetricsRows[0] || [];
+  for (let i = 1; i < opMetricsRows.length; i++) {
+    const rowUnitName = String(opMetricsRows[i]?.[0] || "").trim();
+    if (rowUnitName === unitName) {
+      const predictiveScore = clamp(Math.round((Number(opMetricsRows[i]?.[17]) || 0) * 10) / 10, 0, 100);
+      const metricDrivers: OperationalMetricDriver[] = [];
+      const metricColumns = [
+        { col: 8, name: "Exception Score" },
+        { col: 9, name: "Error Score" },
+        { col: 10, name: "Backlog Score" },
+        { col: 11, name: "Override Score" },
+        { col: 12, name: "Volume Score" },
+        { col: 13, name: "Turnover Score" },
+        { col: 14, name: "Capacity Score" },
+        { col: 15, name: "Operational Stress Score" },
+        { col: 16, name: "Escalation Multiplier" },
+      ];
+      for (const mc of metricColumns) {
+        const val = Number(opMetricsRows[i]?.[mc.col]) || 0;
+        metricDrivers.push({ metric: mc.name, value: Math.round(val * 100) / 100 });
+      }
+      return { score: predictiveScore, metricDrivers };
     }
   }
-
-  let maxIncidentScore = 0;
-  for (const name of unitNames) {
-    let total = 0;
-    for (const inc of incidents) {
-      const matchedUnits = BIZ_AREA_TO_UNITS[inc["Impacted Business Areas"]] || [];
-      if (matchedUnits.includes(name)) {
-        total += (SEVERITY_WEIGHT[inc["Risk Severity"]] || 1) * (PRIORITY_WEIGHT[inc.Priority] || 1);
-      }
-    }
-    if (total > maxIncidentScore) maxIncidentScore = total;
-  }
-
-  const vendorRow = vendors.find(v => v["Auditable Unit"].trim() === unitName);
-  const unitVendors = vendorRow ? vendorRow.Vendors.split(",").map(v => v.trim()) : [];
-  const matchedCves: CyberDriver[] = [];
-  const seenCveIds = new Set<string>();
-
-  const vendorToCves = new Map<string, { total: number; ransomware: number }>();
-  for (const cve of cves) {
-    const vendorLower = cve.vendorProject.toLowerCase().trim();
-    if (!vendorToCves.has(vendorLower)) vendorToCves.set(vendorLower, { total: 0, ransomware: 0 });
-    const entry = vendorToCves.get(vendorLower)!;
-    entry.total++;
-    if (cve.knownRansomwareCampaignUse === "Known") entry.ransomware++;
-  }
-
-  let unitCyberScore = 0;
-  for (const vendor of unitVendors) {
-    const vendorLower = vendor.toLowerCase();
-    for (const cve of cves) {
-      const cveVendor = cve.vendorProject.toLowerCase().trim();
-      let matched = false;
-      if (cveVendor.includes(vendorLower) || vendorLower.includes(cveVendor)) {
-        matched = true;
-      } else {
-        const vendorWords = vendorLower.split(/\s+/);
-        const cveWords = cveVendor.split(/\s+/);
-        if (vendorWords.length > 0 && cveWords.some(w => vendorWords.includes(w) && w.length > 3)) {
-          matched = true;
-        }
-      }
-      if (matched && !seenCveIds.has(cve.cveID)) {
-        seenCveIds.add(cve.cveID);
-        if (matchedCves.length < 5) {
-          matchedCves.push({
-            cveId: cve.cveID,
-            vendor: cve.vendorProject,
-            product: cve.product,
-            name: cve.vulnerabilityName.substring(0, 100),
-            ransomware: cve.knownRansomwareCampaignUse === "Known",
-          });
-        }
-      }
-    }
-    let matchedTotal = 0;
-    let matchedRansomware = 0;
-    let found = false;
-    vendorToCves.forEach((stats, cveVendor) => {
-      if (found) return;
-      if (cveVendor.includes(vendorLower) || vendorLower.includes(cveVendor)) {
-        matchedTotal = stats.total; matchedRansomware = stats.ransomware; found = true; return;
-      }
-      const vendorWords = vendorLower.split(/\s+/);
-      const cveWords = cveVendor.split(/\s+/);
-      if (vendorWords.length > 0 && cveWords.some((w: string) => vendorWords.includes(w) && w.length > 3)) {
-        matchedTotal = stats.total; matchedRansomware = stats.ransomware; found = true; return;
-      }
-    });
-    if (found) {
-      unitCyberScore += matchedTotal + matchedRansomware * 2;
-    }
-  }
-  if (unitVendors.length > 0) {
-    unitCyberScore = clamp((unitCyberScore / unitVendors.length) / 40, 0, 1) * 100;
-  }
-
-  let maxCyberScore = 0;
-  for (const name of unitNames) {
-    const vr = vendors.find(v => v["Auditable Unit"].trim() === name);
-    if (!vr) continue;
-    const vs = vr.Vendors.split(",").map(v => v.trim());
-    let total = 0;
-    for (const v of vs) {
-      const vl = v.toLowerCase();
-      vendorToCves.forEach((stats, cv) => {
-        if (cv.includes(vl) || vl.includes(cv)) { total += stats.total + stats.ransomware * 2; return; }
-        const vw = vl.split(/\s+/);
-        const cw = cv.split(/\s+/);
-        if (vw.length > 0 && cw.some((w: string) => vw.includes(w) && w.length > 3)) { total += stats.total + stats.ransomware * 2; return; }
-      });
-    }
-    const norm = vs.length > 0 ? clamp((total / vs.length) / 40, 0, 1) * 100 : 0;
-    if (norm > maxCyberScore) maxCyberScore = norm;
-  }
-
-  const incidentNorm = maxIncidentScore > 0 ? (unitIncidentScore / maxIncidentScore) * 100 : 0;
-  const cyberNorm = maxCyberScore > 0 ? (unitCyberScore / maxCyberScore) * 100 : 0;
-  const score = Math.round(clamp(incidentNorm * 0.4 + cyberNorm * 0.6, 0, 100) * 10) / 10;
-
-  return {
-    score,
-    incidentDrivers: matchedIncidents.sort((a, b) => b.impact - a.impact).slice(0, 5),
-    cyberDrivers: matchedCves,
-  };
+  return { score: 50, metricDrivers: [] };
 }
 
 function computeFinalDimensionScore(
@@ -693,7 +603,7 @@ function computeNormalizedContributions(
 
 export async function computeDriversForSector(sectorName: string): Promise<DriversResponse | null> {
   const data = await loadData();
-  const { auditRows, incidents, regs, news, vendors, cves, prcRows, issueRows, unitNames } = data;
+  const { auditRows, regs, news, prcRows, issueRows, unitNames, opMetricsRows } = data;
 
   const dataRows = auditRows.slice(3).filter((r: any[]) => r[2]);
   const row = dataRows.find((r: any[]) => String(r[2]) === sectorName);
@@ -704,7 +614,7 @@ export async function computeDriversForSector(sectorName: string): Promise<Drive
   const controlResult = computeUnitControlHealthScore(prcRows, sectorName);
   const issueResult = computeUnitAuditIssueTrendScore(issueRows, sectorName, unitNames);
   const bizExtResult = computeUnitBusinessExternalScore(news, regs, sectorName);
-  const opRiskResult = computeUnitOperationalRiskScore(incidents, vendors, cves, sectorName, unitNames);
+  const opRiskResult = loadUnitOperationalRiskScore(opMetricsRows, sectorName);
 
   const baselineDimScores: Record<string, number> = {};
   for (const dim of RISK_DIMENSIONS) {
@@ -745,15 +655,16 @@ export async function computeDriversForSector(sectorName: string): Promise<Drive
       operationalRiskContribution: opRiskContrib,
       controlHealthDrivers: controlResult.drivers.filter(d => d.score < 100).slice(0, 5),
       auditIssueDrivers: issueResult.drivers.slice(0, 5),
-      incidentDrivers: opRiskResult.incidentDrivers,
+      incidentDrivers: [],
       regulatoryDrivers: bizExtResult.regulatoryDrivers,
       newsDrivers: bizExtResult.newsDrivers,
-      cyberDrivers: opRiskResult.cyberDrivers,
+      cyberDrivers: [],
+      operationalMetricDrivers: opRiskResult.metricDrivers,
       baselineAction: ACTION_MAP["baseline"][dim] || "",
       controlHealthAction: controlResult.drivers.some(d => d.score < 100) ? (ACTION_MAP["controlHealth"][dim] || "") : "",
       auditIssueAction: issueResult.drivers.length > 0 ? (ACTION_MAP["auditIssueTrend"][dim] || "") : "",
       businessExternalAction: (bizExtResult.newsDrivers.length > 0 || bizExtResult.regulatoryDrivers.length > 0) ? (ACTION_MAP["businessExternal"][dim] || "") : "",
-      operationalRiskAction: (opRiskResult.incidentDrivers.length > 0 || opRiskResult.cyberDrivers.length > 0) ? (ACTION_MAP["operationalRisk"][dim] || "") : "",
+      operationalRiskAction: opRiskResult.metricDrivers.length > 0 ? (ACTION_MAP["operationalRisk"][dim] || "") : "",
     });
   }
 

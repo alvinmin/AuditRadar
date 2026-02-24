@@ -1,7 +1,7 @@
 # Audit Radar - Predictive Risk Heatmap
 
 ## Overview
-A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualizes real-time risk across auditable units using interactive heatmaps, trend charts, and alert systems. Uses a **5-Component Predictive Scoring Model** that integrates 8 data sources: an Internal Audit Universe with 28 auditable units, ~200 PRC controls, ~999 audit issues, 100 IT incidents, 6 regulatory inputs, 20 market news articles, 28 vendor-to-unit mappings, and 1,526 known exploited vulnerabilities (CVEs).
+A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualizes real-time risk across auditable units using interactive heatmaps, trend charts, and alert systems. Uses a **5-Component Predictive Scoring Model** that integrates 8 data sources: an Internal Audit Universe with 28 auditable units, ~200 PRC controls, ~999 audit issues, 6 regulatory inputs, 20 market news articles, and pre-computed operational risk scores from a predictive heatmap dataset.
 
 ## Architecture
 - **Frontend**: React + TypeScript + Vite + TailwindCSS + Shadcn UI + Recharts
@@ -26,6 +26,7 @@ A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualiz
 - **Incident Data** (`attached_assets/Incident_data_1771869675474.xlsx`): 100 IT incidents with Priority (Critical/High/Medium/Low), Risk Severity (Severe/Major/Moderate/Minor), Impacted Business Areas, and Impacted Business Process. Used for **Operational Risk Indicators (Component 5)**.
 - **Vendor Mappings** (`attached_assets/Auditable_Units_Tech_Vendors_v2_1771945289230.xlsx`): 28 auditable units mapped to ~5 technology vendors each. Used to link CVE vulnerabilities to specific audit units for **Operational Risk Indicators (Component 5)**.
 - **Known Exploited Vulnerabilities** (`attached_assets/known_exploited_vulnerabilities_1771945289231.xlsx`): 1,526 CVEs with vendor, product, vulnerability name, ransomware campaign usage. Matched to audit unit vendors via fuzzy name matching for **Operational Risk Indicators (Component 5)**.
+- **Predictive Heatmap Dataset** (`attached_assets/predictive_heatmap_dataset_1771962971302.xlsx`): "Operational_Metrics" sheet with 28 auditable units. Column A = unit name, Column R = Predictive Score (pre-computed operational risk). Sub-scores in columns I–Q: Exception, Error, Backlog, Override, Volume, Turnover, Capacity scores, Operational Stress Score, and Escalation Multiplier. Used for **Operational Risk Indicators (Component 5)** — replaces the CVE/vendor + incident calculation.
 
 ## 5-Component Predictive Scoring Model (seed.ts)
 
@@ -39,7 +40,7 @@ Each component produces a unit-level score (0–100), distributed across 7 risk 
 2. **Control Health Score (25%)**: For each business area, scores each PRC control: Both Effective=100, Design only=50, Operating only=40, Neither=0. Averaged across all controls. Higher average = stronger controls = more contribution to composite score. Default=50 if no PRC data.
 3. **Audit & Issue Trend Score (20%)**: Severity-weighted issue density per unit. Weights: Severe=5, High=4, Moderate=3, Low=2, Immaterial=1. Status multiplier: Open=1.0, In Progress=0.5, Closed=0.2. Normalized to 0-100 across all units.
 4. **Business & External Risk Score (15%)**: Combines news sentiment (Negative=+2, Neutral=0, Positive=-1) and regulatory impact (±3 per regulation). Normalized to 0-100. Default=50 if no data.
-5. **Operational Risk Indicators (10%)**: Combines cyber/vendor CVE exposure (CVE count + ransomware×2) and incident severity (severity×priority weighted). Normalized to 0-100.
+5. **Operational Risk Indicators (10%)**: Pre-computed Predictive Score from `predictive_heatmap_dataset_1771962971302.xlsx` (Operational_Metrics sheet, column R). Clamped to 0-100. Sub-scores available: Exception, Error, Backlog, Override, Volume, Turnover, Capacity, Stress, Escalation Multiplier (columns I-Q).
 
 ### Dimension Relevance Matrix
 A 5×7 matrix distributes each component's score across 7 dimensions (Financial, Regulatory, Operational, Change, Fraud, Data/Tech, Reputation). Each row sums to 1.0. For example, Baseline weights Financial heavily (0.20), while Operational Risk weights Data/Tech heavily (0.30).
@@ -65,7 +66,7 @@ Generated when composite-vs-baseline change ≥ 5 points OR avg final score ≥ 
   - 5-component summary cards showing unit-level scores and weights
   - Radar chart comparing Baseline vs Composite scores per dimension
   - Waterfall chart showing how each component builds the final dimension score
-  - Expandable driver details: PRC controls with effectiveness, audit issues with severity/status, incidents, regulations, news articles, CVE vulnerabilities
+  - Expandable driver details: PRC controls with effectiveness, audit issues with severity/status, operational metric sub-scores (Exception, Error, Backlog, Override, Volume, Turnover, Capacity, Stress, Escalation Multiplier), regulations, news articles
   - Recommended actions per component per dimension
 - Market news feed with sentiment indicators
 - Category filtering on heatmap page
