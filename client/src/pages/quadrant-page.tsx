@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ScatterChart,
@@ -15,11 +16,15 @@ import {
   Cell,
   Label,
 } from "recharts";
-import { Crosshair } from "lucide-react";
+import { Crosshair, Filter } from "lucide-react";
 import type { RiskSector, RiskMetric } from "@shared/schema";
+
+const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Fraud", "Data/Tech", "Reputation"];
 
 interface ScatterPoint {
   name: string;
+  dimension: string;
+  label: string;
   sectorId: string;
   category: string;
   x: number;
@@ -43,9 +48,12 @@ const CustomScatterTooltip = ({ active, payload }: any) => {
   const data = payload[0].payload as ScatterPoint;
   const quadrant = getQuadrantLabel(data.x, data.y);
   return (
-    <div className="bg-popover border border-popover-border rounded-md p-3 shadow-lg max-w-[260px]">
-      <p className="text-sm font-semibold text-foreground mb-1">{data.name}</p>
-      <p className="text-[10px] text-muted-foreground mb-2">{data.category}</p>
+    <div className="bg-popover border border-popover-border rounded-md p-3 shadow-lg max-w-[280px]">
+      <p className="text-sm font-semibold text-foreground mb-0.5">{data.name}</p>
+      <div className="flex items-center gap-1.5 mb-2">
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0">{data.dimension}</Badge>
+        <span className="text-[10px] text-muted-foreground">{data.category}</span>
+      </div>
       <div className="space-y-1 text-xs">
         <div className="flex justify-between gap-4">
           <span className="text-muted-foreground">Current Risk Level</span>
@@ -66,27 +74,36 @@ const CustomScatterTooltip = ({ active, payload }: any) => {
 
 export default function QuadrantPage() {
   const [hoveredPoint, setHoveredPoint] = useState<string | null>(null);
+  const [dimensionFilter, setDimensionFilter] = useState<string>("all");
 
   const { data: sectors = [] } = useQuery<RiskSector[]>({ queryKey: ["/api/sectors"] });
   const { data: metrics = [] } = useQuery<RiskMetric[]>({ queryKey: ["/api/metrics"] });
 
-  const scatterData: ScatterPoint[] = sectors.map(sector => {
-    const sectorMetrics = metrics.filter(m => m.sectorId === sector.id);
-    const avgScore = sectorMetrics.length > 0
-      ? sectorMetrics.reduce((sum, m) => sum + m.score, 0) / sectorMetrics.length
-      : 0;
-    const avgPrev = sectorMetrics.length > 0
-      ? sectorMetrics.reduce((sum, m) => sum + (m.previousScore ?? m.score), 0) / sectorMetrics.length
-      : 0;
-    return {
-      name: sector.name,
-      sectorId: sector.id,
-      category: sector.category,
-      x: parseFloat((avgScore - avgPrev).toFixed(2)),
-      y: parseFloat(avgScore.toFixed(2)),
-      riskLevel: avgScore,
-    };
-  });
+  const allScatterData: ScatterPoint[] = useMemo(() => {
+    const points: ScatterPoint[] = [];
+    sectors.forEach(sector => {
+      const sectorMetrics = metrics.filter(m => m.sectorId === sector.id);
+      sectorMetrics.forEach(metric => {
+        const prevScore = metric.previousScore ?? metric.score;
+        points.push({
+          name: sector.name,
+          dimension: metric.metricType,
+          label: `${sector.name} — ${metric.metricType}`,
+          sectorId: sector.id,
+          category: sector.category,
+          x: parseFloat((metric.score - prevScore).toFixed(2)),
+          y: parseFloat(metric.score.toFixed(2)),
+          riskLevel: metric.score,
+        });
+      });
+    });
+    return points;
+  }, [sectors, metrics]);
+
+  const scatterData = useMemo(() => {
+    if (dimensionFilter === "all") return allScatterData;
+    return allScatterData.filter(d => d.dimension === dimensionFilter);
+  }, [allScatterData, dimensionFilter]);
 
   const quadrantCounts = {
     highRising: scatterData.filter(d => d.x >= 0 && d.y >= 75).length,
@@ -105,16 +122,32 @@ export default function QuadrantPage() {
   return (
     <div className="h-full overflow-auto">
       <div className="p-4 sm:p-6 space-y-5 max-w-[1600px] mx-auto">
-        <div>
-          <div className="flex items-center gap-2">
-            <Crosshair className="w-5 h-5 text-primary" />
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-quadrant-title">
-              Risk Quadrant Analysis
-            </h1>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2">
+              <Crosshair className="w-5 h-5 text-primary" />
+              <h1 className="text-2xl font-bold tracking-tight" data-testid="text-quadrant-title">
+                Risk Quadrant Analysis
+              </h1>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1 ml-7">
+              Each point represents an Auditable Unit × Risk Dimension intersection
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground mt-1 ml-7">
-            Four-quadrant view of auditable units by current risk level and risk momentum
-          </p>
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground" />
+            <Select value={dimensionFilter} onValueChange={setDimensionFilter}>
+              <SelectTrigger className="w-[160px]" data-testid="select-dimension-filter">
+                <SelectValue placeholder="All Dimensions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Dimensions</SelectItem>
+                {RISK_DIMENSIONS.map(dim => (
+                  <SelectItem key={dim} value={dim}>{dim}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -193,8 +226,8 @@ export default function QuadrantPage() {
                       fill={getDotColor(entry.x, entry.y)}
                       stroke={getDotColor(entry.x, entry.y)}
                       strokeWidth={1}
-                      r={7}
-                      opacity={hoveredPoint && hoveredPoint !== entry.sectorId ? 0.3 : 0.9}
+                      r={dimensionFilter === "all" ? 5 : 7}
+                      opacity={hoveredPoint && hoveredPoint !== `${entry.sectorId}-${entry.dimension}` ? 0.3 : 0.9}
                     />
                   ))}
                 </Scatter>
@@ -204,7 +237,7 @@ export default function QuadrantPage() {
         </Card>
 
         <Card className="p-4 sm:p-6 border" data-testid="card-quadrant-details">
-          <h3 className="text-sm font-semibold mb-3">Auditable Unit Details</h3>
+          <h3 className="text-sm font-semibold mb-3">Unit × Dimension Details</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {[
               { title: "High & Rising", filter: (d: ScatterPoint) => d.x >= 0 && d.y >= 75, color: "rgba(255, 0, 128, 0.85)" },
@@ -213,6 +246,8 @@ export default function QuadrantPage() {
               { title: "Moderate & Declining", filter: (d: ScatterPoint) => d.x < 0 && d.y < 75, color: "rgba(0, 255, 200, 0.6)" },
             ].map(q => {
               const items = scatterData.filter(q.filter).sort((a, b) => b.y - a.y);
+              const displayItems = items.slice(0, 15);
+              const remaining = items.length - displayItems.length;
               return (
                 <div key={q.title}>
                   <div className="flex items-center gap-2 mb-2">
@@ -220,20 +255,23 @@ export default function QuadrantPage() {
                     <span className="text-xs font-medium">{q.title}</span>
                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{items.length}</Badge>
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-1 max-h-[400px] overflow-y-auto">
                     {items.length === 0 && (
-                      <p className="text-xs text-muted-foreground italic">No units in this quadrant</p>
+                      <p className="text-xs text-muted-foreground italic">No points in this quadrant</p>
                     )}
-                    {items.map(item => (
-                      <Tooltip key={item.sectorId}>
+                    {displayItems.map((item, idx) => (
+                      <Tooltip key={`${item.sectorId}-${item.dimension}-${idx}`}>
                         <TooltipTrigger asChild>
                           <div
                             className="flex items-center justify-between text-xs p-1.5 rounded hover:bg-muted/50 cursor-default transition-colors"
-                            data-testid={`quadrant-item-${item.sectorId}`}
-                            onMouseEnter={() => setHoveredPoint(item.sectorId)}
+                            data-testid={`quadrant-item-${item.sectorId}-${item.dimension}`}
+                            onMouseEnter={() => setHoveredPoint(`${item.sectorId}-${item.dimension}`)}
                             onMouseLeave={() => setHoveredPoint(null)}
                           >
-                            <span className="truncate mr-2">{item.name}</span>
+                            <div className="flex-1 min-w-0 mr-2">
+                              <span className="truncate block">{item.name}</span>
+                              <span className="text-[10px] text-muted-foreground">{item.dimension}</span>
+                            </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="text-muted-foreground">{item.y.toFixed(0)}</span>
                               <span className={item.x >= 0 ? "text-red-400" : "text-emerald-400"}>
@@ -247,6 +285,11 @@ export default function QuadrantPage() {
                         </TooltipContent>
                       </Tooltip>
                     ))}
+                    {remaining > 0 && (
+                      <p className="text-[10px] text-muted-foreground italic pl-1.5 pt-1">
+                        +{remaining} more
+                      </p>
+                    )}
                   </div>
                 </div>
               );
