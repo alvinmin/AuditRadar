@@ -91,9 +91,9 @@ function getSeverityColor(severity: string) {
 }
 
 function getScoreColor(score: number) {
-  if (score >= 80) return "text-red-600";
-  if (score >= 65) return "text-orange-500";
-  if (score >= 45) return "text-yellow-600";
+  if (score >= 90) return "text-red-600";
+  if (score >= 75) return "text-orange-500";
+  if (score >= 40) return "text-yellow-600";
   return "text-green-600";
 }
 

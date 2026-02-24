@@ -71,9 +71,9 @@ function scaleScore(raw: number): number {
 }
 
 function getSeverityFromScore(score: number): string {
-  if (score >= 80) return "critical";
-  if (score >= 65) return "high";
-  if (score >= 45) return "medium";
+  if (score >= 90) return "critical";
+  if (score >= 75) return "high";
+  if (score >= 40) return "medium";
   return "low";
 }
 

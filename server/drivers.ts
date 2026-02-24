@@ -458,7 +458,7 @@ export async function computeDriversForSector(sectorName: string): Promise<Drive
     sectorName,
     sectorCategory: category,
     averageAdjustedScore: avgScore,
-    severity: avgScore >= 80 ? "critical" : avgScore >= 65 ? "high" : avgScore >= 45 ? "medium" : "low",
+    severity: avgScore >= 90 ? "critical" : avgScore >= 75 ? "high" : avgScore >= 40 ? "medium" : "low",
     dimensions,
   };
 }

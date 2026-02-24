@@ -21,29 +21,23 @@ interface RiskHeatmapProps {
 const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Fraud", "Data/Tech", "Reputation"];
 
 function getNeonColor(value: number): string {
-  if (value >= 80) return "rgba(255, 0, 128, 0.85)";
-  if (value >= 65) return "rgba(200, 0, 200, 0.75)";
-  if (value >= 50) return "rgba(160, 50, 255, 0.65)";
-  if (value >= 35) return "rgba(100, 80, 255, 0.55)";
-  if (value >= 20) return "rgba(0, 200, 255, 0.50)";
+  if (value >= 90) return "rgba(255, 0, 128, 0.85)";
+  if (value >= 75) return "rgba(200, 0, 200, 0.75)";
+  if (value >= 40) return "rgba(100, 80, 255, 0.55)";
   return "rgba(0, 255, 200, 0.40)";
 }
 
 function getNeonGlow(value: number): string {
-  if (value >= 80) return "0 0 12px rgba(255, 0, 128, 0.6), 0 0 24px rgba(255, 0, 128, 0.3), inset 0 0 8px rgba(255, 0, 128, 0.2)";
-  if (value >= 65) return "0 0 10px rgba(200, 0, 200, 0.5), 0 0 20px rgba(200, 0, 200, 0.2)";
-  if (value >= 50) return "0 0 8px rgba(160, 50, 255, 0.4), 0 0 16px rgba(160, 50, 255, 0.15)";
-  if (value >= 35) return "0 0 6px rgba(100, 80, 255, 0.3)";
-  if (value >= 20) return "0 0 6px rgba(0, 200, 255, 0.3)";
+  if (value >= 90) return "0 0 12px rgba(255, 0, 128, 0.6), 0 0 24px rgba(255, 0, 128, 0.3), inset 0 0 8px rgba(255, 0, 128, 0.2)";
+  if (value >= 75) return "0 0 10px rgba(200, 0, 200, 0.5), 0 0 20px rgba(200, 0, 200, 0.2)";
+  if (value >= 40) return "0 0 6px rgba(100, 80, 255, 0.3)";
   return "0 0 4px rgba(0, 255, 200, 0.2)";
 }
 
 function getNeonBorder(value: number): string {
-  if (value >= 80) return "1px solid rgba(255, 0, 128, 0.6)";
-  if (value >= 65) return "1px solid rgba(200, 0, 200, 0.5)";
-  if (value >= 50) return "1px solid rgba(160, 50, 255, 0.4)";
-  if (value >= 35) return "1px solid rgba(100, 80, 255, 0.3)";
-  if (value >= 20) return "1px solid rgba(0, 200, 255, 0.3)";
+  if (value >= 90) return "1px solid rgba(255, 0, 128, 0.6)";
+  if (value >= 75) return "1px solid rgba(200, 0, 200, 0.5)";
+  if (value >= 40) return "1px solid rgba(100, 80, 255, 0.3)";
   return "1px solid rgba(0, 255, 200, 0.2)";
 }
 
@@ -54,12 +48,10 @@ function getTrendIcon(trend: string) {
 }
 
 function getRiskLabel(value: number): string {
-  if (value >= 80) return "Critical";
-  if (value >= 65) return "High";
-  if (value >= 50) return "Elevated";
-  if (value >= 35) return "Moderate";
-  if (value >= 20) return "Low";
-  return "Minimal";
+  if (value >= 90) return "Critical";
+  if (value >= 75) return "High";
+  if (value >= 40) return "Medium";
+  return "Low";
 }
 
 export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: RiskHeatmapProps) {
@@ -82,16 +74,20 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
-            <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(0, 255, 200, 0.5)" }} />
-            <span className="sf-label">Low</span>
+            <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(0, 255, 200, 0.40)" }} />
+            <span className="sf-label">Low (0-39)</span>
           </div>
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
-            <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(160, 50, 255, 0.7)" }} />
-            <span className="sf-label">Medium</span>
+            <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(100, 80, 255, 0.55)" }} />
+            <span className="sf-label">Medium (40-74)</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
+            <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(200, 0, 200, 0.75)" }} />
+            <span className="sf-label">High (75-90)</span>
           </div>
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
             <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(255, 0, 128, 0.85)" }} />
-            <span className="sf-label">Critical</span>
+            <span className="sf-label">Critical (90+)</span>
           </div>
         </div>
       </div>

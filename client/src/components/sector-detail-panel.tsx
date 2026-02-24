@@ -13,26 +13,23 @@ interface SectorDetailPanelProps {
 }
 
 function getSeverityBadge(score: number) {
-  if (score >= 80) return <Badge variant="destructive" className="text-[10px]">Critical</Badge>;
-  if (score >= 65) return <Badge className="text-[10px] bg-orange-500/90 text-white border-orange-600/50">High</Badge>;
-  if (score >= 50) return <Badge className="text-[10px] bg-amber-500/80 text-white border-amber-600/50">Elevated</Badge>;
-  if (score >= 35) return <Badge variant="secondary" className="text-[10px]">Moderate</Badge>;
+  if (score >= 90) return <Badge variant="destructive" className="text-[10px]">Critical</Badge>;
+  if (score >= 75) return <Badge className="text-[10px] bg-orange-500/90 text-white border-orange-600/50">High</Badge>;
+  if (score >= 40) return <Badge variant="secondary" className="text-[10px]">Medium</Badge>;
   return <Badge variant="secondary" className="text-[10px]">Low</Badge>;
 }
 
 function getScoreColor(score: number) {
-  if (score >= 80) return "text-red-600 dark:text-red-400";
-  if (score >= 65) return "text-orange-600 dark:text-orange-400";
-  if (score >= 50) return "text-amber-600 dark:text-amber-400";
-  if (score >= 35) return "text-yellow-600 dark:text-yellow-400";
+  if (score >= 90) return "text-red-600 dark:text-red-400";
+  if (score >= 75) return "text-orange-600 dark:text-orange-400";
+  if (score >= 40) return "text-amber-600 dark:text-amber-400";
   return "text-emerald-600 dark:text-emerald-400";
 }
 
 function getProgressColor(score: number) {
-  if (score >= 80) return "[&>div]:bg-red-500";
-  if (score >= 65) return "[&>div]:bg-orange-500";
-  if (score >= 50) return "[&>div]:bg-amber-500";
-  if (score >= 35) return "[&>div]:bg-yellow-500";
+  if (score >= 90) return "[&>div]:bg-red-500";
+  if (score >= 75) return "[&>div]:bg-orange-500";
+  if (score >= 40) return "[&>div]:bg-amber-500";
   return "[&>div]:bg-emerald-500";
 }
 

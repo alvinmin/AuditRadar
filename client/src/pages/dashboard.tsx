@@ -100,7 +100,7 @@ function buildSummaryMetrics(metrics: RiskMetric[]) {
       change: changeFromPrev,
       changeLabel: "vs base scores",
       icon: "shield" as const,
-      severity: avgScore >= 65 ? "high" as const : avgScore >= 45 ? "medium" as const : "low" as const,
+      severity: avgScore >= 90 ? "critical" as const : avgScore >= 75 ? "high" as const : avgScore >= 40 ? "medium" as const : "low" as const,
       tooltip: "The average adjusted risk score across all 28 auditable units and 7 risk dimensions. Scores range from 0 (minimal risk) to 100 (critical risk). This reflects the combined impact of incident data, regulatory changes, and market news on base audit scores.",
     },
     {
