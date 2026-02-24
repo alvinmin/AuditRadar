@@ -20,25 +20,31 @@ interface RiskHeatmapProps {
 
 const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Fraud", "Data/Tech", "Reputation"];
 
-function getNeonColor(value: number): string {
-  if (value > 90) return "rgba(255, 0, 128, 0.85)";
-  if (value >= 71) return "rgba(200, 0, 200, 0.75)";
-  if (value >= 31) return "rgba(100, 80, 255, 0.55)";
-  return "rgba(0, 255, 200, 0.40)";
+function getHue(value: number): number {
+  if (value <= 60) return 120;
+  if (value <= 75) return 120 - ((value - 60) / 15) * 75;
+  return 45 - ((value - 75) / 25) * 45;
 }
 
-function getNeonGlow(value: number): string {
-  if (value > 90) return "0 0 12px rgba(255, 0, 128, 0.6), 0 0 24px rgba(255, 0, 128, 0.3), inset 0 0 8px rgba(255, 0, 128, 0.2)";
-  if (value >= 71) return "0 0 10px rgba(200, 0, 200, 0.5), 0 0 20px rgba(200, 0, 200, 0.2)";
-  if (value >= 31) return "0 0 6px rgba(100, 80, 255, 0.3)";
-  return "0 0 4px rgba(0, 255, 200, 0.2)";
+function getCellColor(value: number): string {
+  const hue = getHue(value);
+  const sat = value <= 60 ? 52 : 52 + ((value - 60) / 40) * 28;
+  const lit = value <= 60 ? 36 : 36 - ((value - 60) / 40) * 8;
+  const alpha = 0.72 + (value / 100) * 0.22;
+  return `hsla(${hue.toFixed(1)}, ${sat.toFixed(0)}%, ${lit.toFixed(0)}%, ${alpha.toFixed(2)})`;
 }
 
-function getNeonBorder(value: number): string {
-  if (value > 90) return "1px solid rgba(255, 0, 128, 0.6)";
-  if (value >= 71) return "1px solid rgba(200, 0, 200, 0.5)";
-  if (value >= 31) return "1px solid rgba(100, 80, 255, 0.3)";
-  return "1px solid rgba(0, 255, 200, 0.2)";
+function getCellGlow(value: number): string {
+  const hue = getHue(value);
+  const intensity = 0.12 + (value / 100) * 0.40;
+  const spread = 4 + (value / 100) * 12;
+  return `0 0 ${spread.toFixed(0)}px hsla(${hue.toFixed(1)}, 75%, 50%, ${intensity.toFixed(2)})`;
+}
+
+function getCellBorder(value: number): string {
+  const hue = getHue(value);
+  const alpha = 0.20 + (value / 100) * 0.50;
+  return `1px solid hsla(${hue.toFixed(1)}, 65%, 55%, ${alpha.toFixed(2)})`;
 }
 
 function getTrendIcon(trend: string) {
@@ -72,22 +78,16 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
           </h2>
           <p className="text-xs sf-subtitle mt-1 tracking-wide">Cross-sector risk assessment matrix // LIVE MONITORING</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
-            <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(0, 255, 200, 0.40)" }} />
-            <span className="sf-label">Low (0-39)</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
-            <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(100, 80, 255, 0.55)" }} />
-            <span className="sf-label">Medium (40-74)</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
-            <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(200, 0, 200, 0.75)" }} />
-            <span className="sf-label">High (75-90)</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
-            <div className="w-3 h-3 rounded-sm" style={{ background: "rgba(255, 0, 128, 0.85)" }} />
-            <span className="sf-label">Critical (90+)</span>
+        <div className="flex items-center gap-2">
+          <div
+            className="h-3 w-32 rounded-sm"
+            style={{ background: "linear-gradient(to right, hsla(120,52%,36%,0.82), hsla(60,65%,34%,0.88), hsla(30,72%,32%,0.90), hsla(0,80%,28%,0.94))" }}
+          />
+          <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider">
+            <span className="sf-label">0 — Low</span>
+            <span className="sf-label">60</span>
+            <span className="sf-label">75</span>
+            <span className="sf-label">100 — Critical</span>
           </div>
         </div>
       </div>
@@ -131,11 +131,11 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
                             ${selectedSector && sectorObj?.id === selectedSector ? "ring-1 ring-cyan-400/60" : ""}
                           `}
                           style={{
-                            backgroundColor: getNeonColor(value),
+                            backgroundColor: getCellColor(value),
                             boxShadow: isHovered
-                              ? `${getNeonGlow(value)}, 0 0 30px rgba(0, 200, 255, 0.2)`
-                              : getNeonGlow(value),
-                            border: getNeonBorder(value),
+                              ? `${getCellGlow(value)}, 0 0 20px rgba(255,255,255,0.08)`
+                              : getCellGlow(value),
+                            border: getCellBorder(value),
                           }}
                           onClick={() => sectorObj && onCellClick?.(sectorObj.id, dim)}
                           onMouseEnter={() => setHoveredCell(cellKey)}
