@@ -177,13 +177,13 @@ function scaleScore(raw: number): number {
 
 const ACTION_MAP: Record<string, Record<string, string>> = {
   "baseline": {
-    "Financial": "Review and recalibrate baseline financial risk assumptions based on current business conditions.",
-    "Regulatory": "Validate baseline regulatory risk ratings against current compliance obligations.",
-    "Operational": "Reassess baseline operational risk parameters for process maturity changes.",
-    "Change": "Evaluate whether baseline change risk still reflects current transformation pace.",
-    "Fraud": "Update baseline fraud risk indicators to reflect current threat landscape.",
-    "Data/Tech": "Review baseline technology risk scores for relevance to current IT architecture.",
-    "Reputation": "Assess whether baseline reputational risk captures current stakeholder dynamics.",
+    "Financial": "Review and recalibrate qualitative financial risk assessment based on current business conditions.",
+    "Regulatory": "Validate qualitative regulatory risk ratings against current compliance obligations.",
+    "Operational": "Reassess qualitative operational risk parameters for process maturity changes.",
+    "Change": "Evaluate whether qualitative change risk assessment still reflects current transformation pace.",
+    "Fraud": "Update qualitative fraud risk indicators to reflect current threat landscape.",
+    "Data/Tech": "Review qualitative technology risk scores for relevance to current IT architecture.",
+    "Reputation": "Assess whether qualitative reputational risk assessment captures current stakeholder dynamics.",
   },
   "controlHealth": {
     "Financial": "Strengthen financial controls with design and operating effectiveness gaps; prioritize remediation.",

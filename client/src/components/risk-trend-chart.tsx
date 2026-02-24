@@ -21,7 +21,7 @@ interface RiskTrendChartProps {
   isLoading?: boolean;
 }
 
-const QUARTERS = ["Q3 2025", "Q4 2025", "Q1 2026", "Q2 2026"];
+const QUARTERS = ["Q1 2025", "Q2 2025", "Q3 2025", "Q4 2025", "Q1 2026"];
 
 const DIMENSION_COLORS: Record<string, string> = {
   "Financial": "#3b82f6",
@@ -36,19 +36,20 @@ const DIMENSION_COLORS: Record<string, string> = {
 const METRIC_TYPES = ["Financial", "Regulatory", "Operational", "Change", "Fraud", "Data/Tech", "Reputation"];
 
 function interpolateQuarterly(currentScore: number, previousScore: number): number[] {
-  const baseEstimate = previousScore;
-  const diff = currentScore - baseEstimate;
+  const diff = currentScore - previousScore;
 
-  const q3 = baseEstimate + diff * 0.15;
-  const q4 = baseEstimate + diff * 0.40;
-  const q1 = baseEstimate + diff * 0.70;
-  const q2 = currentScore;
+  const q1_25 = previousScore - diff * 0.6;
+  const q2_25 = previousScore - diff * 0.3;
+  const q3_25 = previousScore - diff * 0.05;
+  const q4_25 = previousScore;
+  const q1_26 = currentScore;
 
   return [
-    Math.max(0, Math.min(100, Math.round(q3 * 10) / 10)),
-    Math.max(0, Math.min(100, Math.round(q4 * 10) / 10)),
-    Math.max(0, Math.min(100, Math.round(q1 * 10) / 10)),
-    Math.max(0, Math.min(100, Math.round(q2 * 10) / 10)),
+    Math.max(0, Math.min(100, Math.round(q1_25 * 10) / 10)),
+    Math.max(0, Math.min(100, Math.round(q2_25 * 10) / 10)),
+    Math.max(0, Math.min(100, Math.round(q3_25 * 10) / 10)),
+    Math.max(0, Math.min(100, Math.round(q4_25 * 10) / 10)),
+    Math.max(0, Math.min(100, Math.round(q1_26 * 10) / 10)),
   ];
 }
 
@@ -104,18 +105,12 @@ function generateMetricQuarterlyData(metrics: RiskMetric[], metricType: string) 
   const currentQuarterly = interpolateQuarterly(avgCurrent, avgPrevious);
 
   const predictedDiff = avgPredicted - avgCurrent;
-  const predictedQ3 = avgCurrent + predictedDiff * 0.25;
-  const predictedQuarterly = [
-    currentQuarterly[0],
-    currentQuarterly[1],
-    currentQuarterly[2],
-    Math.max(0, Math.min(100, Math.round(predictedQ3 * 10) / 10)),
-  ];
+  const predictedNext = Math.max(0, Math.min(100, Math.round((avgCurrent + predictedDiff * 0.25) * 10) / 10));
 
   return QUARTERS.map((q, i) => ({
     quarter: q,
     "Current": currentQuarterly[i],
-    "Predicted": i === 3 ? predictedQuarterly[3] : null,
+    "Predicted": i === 4 ? predictedNext : null,
   }));
 }
 
@@ -159,7 +154,7 @@ export function RiskTrendChart({ metrics, sectors, isLoading }: RiskTrendChartPr
       <div className="flex items-center justify-between gap-2 mb-4">
         <div>
           <h3 className="text-base font-semibold" data-testid="text-trend-title">Risk Trend Analysis</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Quarterly risk score trajectory (Q3 2025 — Q2 2026)</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Quarterly risk score trajectory (Q1 2025 — Q1 2026)</p>
         </div>
       </div>
 

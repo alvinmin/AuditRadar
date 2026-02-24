@@ -496,7 +496,17 @@ export async function seedDatabase() {
         maxDim = dim;
       }
 
-      const baselineDimOnly = computeFinalDimensionScore(dim, baselineDimScores[dim], 50, 0, 50, 0);
+      const priorQuarterDampen = 0.85;
+      const priorQuarterScore = clamp(Math.round(
+        computeFinalDimensionScore(
+          dim,
+          baselineDimScores[dim],
+          controlHealth * priorQuarterDampen,
+          auditIssueTrend * priorQuarterDampen,
+          businessExternal * priorQuarterDampen + (1 - priorQuarterDampen) * 50,
+          operationalRisk * priorQuarterDampen
+        )
+      ), 0, 100);
 
       const nonBaselineSignals = [controlHealth - 50, auditIssueTrend, businessExternal - 50, operationalRisk];
       const DECAY = 0.25;
@@ -516,13 +526,13 @@ export async function seedDatabase() {
         ? clamp(0.75 + (signalCount / 4) * 0.15, 0.7, 0.95)
         : clamp(0.55 + (signalCount / 4) * 0.10, 0.45, 0.70);
 
-      const trend = finalScore > baselineDimOnly + 2 ? "up" : finalScore < baselineDimOnly - 2 ? "down" : "stable";
+      const trend = finalScore > priorQuarterScore + 2 ? "up" : finalScore < priorQuarterScore - 2 ? "down" : "stable";
 
       await storage.createMetric({
         sectorId: created.id,
         metricType: dim,
         score: finalScore,
-        previousScore: Math.round(baselineDimScores[dim]),
+        previousScore: priorQuarterScore,
         predictedScore,
         confidence,
       });
@@ -536,8 +546,19 @@ export async function seedDatabase() {
     }
 
     const avgFinalScore = totalFinalScore / RISK_DIMENSIONS.length;
-    const avgBaselineScore = baselineAvg;
-    const scoreChange = avgFinalScore - avgBaselineScore;
+    const avgPriorQuarter = dimResults.reduce((sum, d) => {
+      const pq = clamp(Math.round(
+        computeFinalDimensionScore(
+          d.dim, baselineDimScores[d.dim],
+          controlHealth * 0.85,
+          auditIssueTrend * 0.85,
+          businessExternal * 0.85 + 0.15 * 50,
+          operationalRisk * 0.85
+        )
+      ), 0, 100);
+      return sum + pq;
+    }, 0) / RISK_DIMENSIONS.length;
+    const scoreChange = avgFinalScore - avgPriorQuarter;
     const absScoreChange = Math.abs(scoreChange);
 
     if (absScoreChange >= 5 || avgFinalScore >= 70) {
@@ -545,7 +566,7 @@ export async function seedDatabase() {
       const sevLabel = severity.charAt(0).toUpperCase() + severity.slice(1);
 
       const componentBreakdown = [
-        `Baseline: ${Math.round(baselineAvg)}`,
+        `Qualitative Risk: ${Math.round(baselineAvg)}`,
         `Control Health: ${Math.round(controlHealth)}`,
         `Issues: ${Math.round(auditIssueTrend)}`,
         `Business/External: ${Math.round(businessExternal)}`,

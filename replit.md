@@ -18,7 +18,7 @@ A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualiz
 - `shared/schema.ts` - Drizzle schema definitions (riskSectors, riskMetrics, riskAlerts, heatmapData, marketNews)
 
 ## Data Sources
-- **Audit Universe** (`attached_assets/Internal_Audit_Universe_Auto_Scoring_1771865142852.xlsm`): "Audit Universe" sheet with 28 auditable units (Column C) and 7 risk scoring dimensions (Financial, Regulatory, Operational, Change, Fraud, Data/Tech, Reputation). Scores are 1-5, scaled to 0-100. Used for **Baseline Risk Score (Component 1)**.
+- **Audit Universe** (`attached_assets/Internal_Audit_Universe_Auto_Scoring_1771865142852.xlsm`): "Audit Universe" sheet with 28 auditable units (Column C) and 7 risk scoring dimensions (Financial, Regulatory, Operational, Change, Fraud, Data/Tech, Reputation). Scores are 1-5, scaled to 0-100. Used for **Qualitative Risk Assessment (Component 1)**.
 - **PRC Controls** (`attached_assets/PRC_updated_1771952095993.xlsx`, Sheet2): ~200 controls per business area with Control ID, Control Type (Manual/Automated), Design Effectiveness (Effective/Not Effective), Operating Effectiveness (Effective/Not Effective). Used for **Control Health Score (Component 2)**.
 - **Audit Issues** (`attached_assets/Issue_details_no_quarter_1771952095994.xlsx`, Sheet1): ~999 audit issues with Issue Title, Description, Severity (Severe/High/Moderate/Low/Immaterial), Status (Open/In Progress/Closed), Source (Internal Audit/Regulatory/MSI/SOX), Audit Engagement. Used for **Audit & Issue Trend Score (Component 3)**.
 - **Market News** (`attached_assets/Predictive_Audit_Market_News_With_Articles_Updated_Categories_1771874482512.xlsx`, Sheet2): 20 news articles with title, source, summary, and category. Sentiment and risk type derived algorithmically. Used for **Business & External Risk Score (Component 4)**.
@@ -31,12 +31,12 @@ A predictive risk monitoring dashboard built for the DTCC AI Hackathon. Visualiz
 ## 5-Component Predictive Scoring Model (seed.ts)
 
 ### Formula
-**Final Score = (Baseline × 0.30) + (Control Health × 0.25) + (Audit Issues × 0.20) + (Business/External × 0.15) + (Operational Risk × 0.10)**
+**Final Score = (Qualitative Risk Assessment × 0.30) + (Control Health × 0.25) + (Audit Issues × 0.20) + (Business/External × 0.15) + (Operational Risk × 0.10)**
 
 Each component produces a unit-level score (0–100), distributed across 7 risk dimensions via a dimension relevance matrix.
 
 ### Components
-1. **Baseline Risk Score (30%)**: Raw Audit Universe scores scaled from 1-5 to 0-100. Represents inherent risk assessment from audit universe.
+1. **Qualitative Risk Assessment (30%)**: Raw Audit Universe scores scaled from 1-5 to 0-100. Represents inherent risk assessment from audit universe. (Internally referenced as "baseline" in code variables.)
 2. **Control Health Score (25%)**: For each business area, scores each PRC control: Both Effective=100, Design only=50, Operating only=40, Neither=0. Averaged across all controls. Higher average = stronger controls = more contribution to composite score. Default=50 if no PRC data.
 3. **Audit & Issue Trend Score (20%)**: Severity-weighted issue density per unit. Weights: Severe=5, High=4, Moderate=3, Low=2, Immaterial=1. Status multiplier: Open=1.0, In Progress=0.5, Closed=0.2. Normalized to 0-100 across all units.
 4. **Business & External Risk Score (15%)**: Combines news sentiment (Negative=+2, Neutral=0, Positive=-1) and regulatory impact (±3 per regulation). Normalized to 0-100. Default=50 if no data.
@@ -48,23 +48,23 @@ A 5×7 matrix distributes each component's score across 7 dimensions (Financial,
 ### Final Per-Dimension Score
 `score = sum(component_score × component_weight × dimension_relevance) / max_possible × 100`, clamped to 0-100.
 
-### Previous Score & Trend
-Previous score = Baseline component only (Component 1). Current = full 5-component composite. Difference shows impact of non-baseline factors.
+### Previous Score & Trend (Quarter over Quarter)
+Previous score = Simulated Q4 2025 score using same 5-component formula with dampened non-baseline factors (×0.85). Current = Q1 2026 full composite. Trend arrows and change metrics reflect quarter-over-quarter movement. Historical quarterly data (Q1 2025–Q1 2026) is interpolated from previousScore to currentScore for trend charts.
 
 ### Predicted Score
 Momentum from 4 non-baseline component signals (deviations from neutral): `Predicted = clamp(Current + (ControlDeviation×1.2 + AuditIssues×1.4 + BizExtDeviation×1.5 + OpRisk×1.3) × 0.25 × avgDimRelevance, 0, 100)`. Confidence derived from signal consistency: all same direction → 0.75-0.95; mixed signals → 0.45-0.70.
 
 ### Alerts
-Generated when composite-vs-baseline change ≥ 5 points OR avg final score ≥ 70. Severity: Critical (avg ≥ 85), High (avg ≥ 70 or change ≥ 10), Medium (otherwise). Each alert includes 5 component scores and top 3 highest-scoring dimensions.
+Generated when QoQ change ≥ 5 points OR avg final score ≥ 70. Severity: Critical (avg > 90), High (avg ≥ 71 or change ≥ 10), Medium (otherwise). Each alert includes 5 component scores and top 3 highest-scoring dimensions.
 
 ## Key Features
 - Interactive risk heatmap: 28 auditable units (vertical) x 7 risk dimensions (horizontal) with color-coded severity
-- 2 summary metric cards (Overall Risk Score, Risk Score Change) with hover tooltips
-- Risk trend analysis charts (by sector and by selectable metric dimension)
+- 2 summary metric cards (Overall Risk Score, Risk Score Change) with QoQ comparison and hover tooltips
+- Risk trend analysis charts showing 5 quarters (Q1 2025–Q1 2026) by sector and by selectable metric dimension
 - Alert management with severity filtering and expandable component score breakdowns
 - Score Explainability page with:
   - 5-component summary cards showing unit-level scores and weights
-  - Radar chart comparing Baseline vs Composite scores per dimension
+  - Radar chart comparing Qualitative Risk vs Composite scores per dimension
   - Waterfall chart showing how each component builds the final dimension score
   - Expandable driver details: PRC controls with effectiveness, audit issues with severity/status, operational metric sub-scores (Exception, Error, Backlog, Override, Volume, Turnover, Capacity, Stress, Escalation Multiplier), regulations, news articles
   - Recommended actions per component per dimension

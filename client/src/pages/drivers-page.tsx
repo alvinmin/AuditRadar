@@ -134,7 +134,7 @@ function getScoreColor(score: number) {
 }
 
 const WATERFALL_COLORS: Record<string, string> = {
-  "Baseline (30%)": "#6366f1",
+  "Qualitative Risk (30%)": "#6366f1",
   "Control Health (25%)": "#8b5cf6",
   "Issues (20%)": "#f59e0b",
   "Business/External (15%)": "#3b82f6",
@@ -151,7 +151,7 @@ function CustomRadarTooltip({ active, payload }: any) {
       <p className="font-semibold text-sm">{data.dimension}</p>
       <div className="flex items-center gap-2">
         <div className="w-2.5 h-2.5 rounded-full bg-blue-400" />
-        <span>Baseline: {data.base}</span>
+        <span>Qualitative Risk: {data.base}</span>
       </div>
       <div className="flex items-center gap-2">
         <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
@@ -218,7 +218,7 @@ function RiskRadarChart({ dimensions, selectedDimension, onSelectDimension }: {
             />
             <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
             <Radar
-              name="Baseline Score"
+              name="Qualitative Risk Score"
               dataKey="base"
               stroke="#60a5fa"
               fill="#60a5fa"
@@ -241,7 +241,7 @@ function RiskRadarChart({ dimensions, selectedDimension, onSelectDimension }: {
       <div className="flex items-center justify-center gap-6 mt-2">
         <div className="flex items-center gap-2 text-xs">
           <div className="w-4 h-0.5 bg-blue-400 border-dashed border-t-2 border-blue-400" />
-          <span className="text-muted-foreground">Baseline Score</span>
+          <span className="text-muted-foreground">Qualitative Risk Score</span>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <div className="w-4 h-0.5 bg-red-400" />
@@ -264,7 +264,7 @@ function WaterfallChart({ dim }: { dim: DimensionDriver }) {
     let running = 0;
     const data = [];
 
-    data.push({ name: "Baseline (30%)", invisible: 0, value: bl, displayValue: bl, isTotal: false });
+    data.push({ name: "Qualitative Risk (30%)", invisible: 0, value: bl, displayValue: bl, isTotal: false });
     running += bl;
 
     data.push({ name: "Control Health (25%)", invisible: running, value: ch, displayValue: ch, isTotal: false });
@@ -540,7 +540,7 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
 }
 
 const COMPONENT_META = [
-  { key: "baseline", label: "Baseline Risk", weight: "30%", color: "bg-indigo-500", textColor: "text-indigo-600" },
+  { key: "baseline", label: "Qualitative Risk Assessment", weight: "30%", color: "bg-indigo-500", textColor: "text-indigo-600" },
   { key: "controlHealth", label: "Control Health", weight: "25%", color: "bg-purple-500", textColor: "text-purple-600" },
   { key: "auditIssueTrend", label: "Issues", weight: "20%", color: "bg-amber-500", textColor: "text-amber-600" },
   { key: "businessExternal", label: "Business/External", weight: "15%", color: "bg-blue-500", textColor: "text-blue-600" },

@@ -118,19 +118,19 @@ function buildSummaryMetrics(metrics: RiskMetric[]) {
       label: "Overall Risk Score",
       value: avgScore.toFixed(1),
       change: changeFromPrev,
-      changeLabel: "vs base scores",
+      changeLabel: "vs prior quarter",
       icon: "shield" as const,
       severity: avgScore > 90 ? "critical" as const : avgScore >= 71 ? "high" as const : avgScore >= 31 ? "medium" as const : "low" as const,
-      tooltip: "The average adjusted risk score across all 28 auditable units and 7 risk dimensions. Scores range from 0 (minimal risk) to 100 (critical risk). This reflects the combined impact of incident data, regulatory changes, and market news on base audit scores.",
+      tooltip: "The average composite risk score across all 28 auditable units and 7 risk dimensions for Q1 2026. Scores range from 0 (minimal risk) to 100 (critical risk). Change shown is quarter over quarter vs Q4 2025.",
     },
     {
       label: "Risk Score Change",
       value: `${changeFromPrev >= 0 ? "+" : ""}${changeFromPrev.toFixed(1)}`,
       change: changeFromPrev,
-      changeLabel: "from adjustments",
+      changeLabel: "quarter over quarter",
       icon: "chart" as const,
       severity: Math.abs(changeFromPrev) >= 10 ? "critical" as const : Math.abs(changeFromPrev) >= 5 ? "high" as const : Math.abs(changeFromPrev) >= 2 ? "medium" as const : "low" as const,
-      tooltip: "The average change in risk scores compared to base audit scores. This captures how much incident data, regulatory changes, and market news have shifted risk levels. A positive value means risk is increasing; negative means it's decreasing.",
+      tooltip: "The average change in risk scores compared to Q4 2025. A positive value means risk is increasing quarter over quarter; negative means it's decreasing.",
     },
   ];
 }
