@@ -27,9 +27,9 @@ function getBand(value: number): { bg: string; glow: string; border: string } {
     border: "1px solid hsla(4, 70%, 58%, 0.70)",
   };
   if (value >= 66) return {
-    bg:     "hsla(48, 80%, 44%, 0.90)",
-    glow:   "0 0 8px hsla(48, 85%, 52%, 0.35)",
-    border: "1px solid hsla(48, 75%, 58%, 0.60)",
+    bg:     "hsla(50, 100%, 50%, 0.93)",
+    glow:   "0 0 8px hsla(50, 100%, 55%, 0.45)",
+    border: "1px solid hsla(50, 95%, 60%, 0.65)",
   };
   if (value >= 51) return {
     bg:     "hsla(122, 50%, 38%, 0.88)",
@@ -88,7 +88,7 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
             <span className="sf-label">51–65</span>
           </div>
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
-            <div className="w-3 h-3 rounded-sm" style={{ background: "hsla(48,80%,44%,0.90)" }} />
+            <div className="w-3 h-3 rounded-sm" style={{ background: "hsla(50,100%,50%,0.93)" }} />
             <span className="sf-label">66–90</span>
           </div>
           <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
