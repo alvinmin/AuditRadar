@@ -647,10 +647,48 @@ function computeFinalDimensionScore(
   return Math.round((weightedSum / maxPossible) * 100 * 10) / 10;
 }
 
-function computeContribution(componentScore: number, componentKey: string, dimension: string): number {
-  const compWeight = COMPONENT_WEIGHTS[componentKey as keyof typeof COMPONENT_WEIGHTS];
-  const dimRelevance = DIMENSION_RELEVANCE[componentKey][dimension];
-  return Math.round(componentScore * compWeight * dimRelevance * 10) / 10;
+function computeNormalizedContributions(
+  dimension: string,
+  baselineScore: number,
+  controlHealthScore: number,
+  auditIssueTrendScore: number,
+  businessExternalScore: number,
+  operationalRiskScore: number,
+): { baseline: number; controlHealth: number; auditIssueTrend: number; businessExternal: number; operationalRisk: number } {
+  const scores: Record<string, number> = {
+    baseline: baselineScore,
+    controlHealth: controlHealthScore,
+    auditIssueTrend: auditIssueTrendScore,
+    businessExternal: businessExternalScore,
+    operationalRisk: operationalRiskScore,
+  };
+
+  let maxPossible = 0;
+  const keys = Object.keys(scores);
+  keys.forEach((key) => {
+    const compWeight = COMPONENT_WEIGHTS[key as keyof typeof COMPONENT_WEIGHTS];
+    const dimRelevance = DIMENSION_RELEVANCE[key][dimension];
+    maxPossible += 100 * compWeight * dimRelevance;
+  });
+
+  if (maxPossible === 0) {
+    return { baseline: 0, controlHealth: 0, auditIssueTrend: 0, businessExternal: 0, operationalRisk: 0 };
+  }
+
+  const result: Record<string, number> = {};
+  keys.forEach((key) => {
+    const compWeight = COMPONENT_WEIGHTS[key as keyof typeof COMPONENT_WEIGHTS];
+    const dimRelevance = DIMENSION_RELEVANCE[key][dimension];
+    result[key] = Math.round((scores[key] * compWeight * dimRelevance) / maxPossible * 100 * 10) / 10;
+  });
+
+  return {
+    baseline: result.baseline,
+    controlHealth: result.controlHealth,
+    auditIssueTrend: result.auditIssueTrend,
+    businessExternal: result.businessExternal,
+    operationalRisk: result.operationalRisk,
+  };
 }
 
 export async function computeDriversForSector(sectorName: string): Promise<DriversResponse | null> {
@@ -685,11 +723,14 @@ export async function computeDriversForSector(sectorName: string): Promise<Drive
       dim, baselineDimScores[dim], controlResult.score, issueResult.score, bizExtResult.score, opRiskResult.score
     );
 
-    const baselineContrib = computeContribution(baselineDimScores[dim], "baseline", dim);
-    const controlContrib = computeContribution(controlResult.score, "controlHealth", dim);
-    const issueContrib = computeContribution(issueResult.score, "auditIssueTrend", dim);
-    const bizExtContrib = computeContribution(bizExtResult.score, "businessExternal", dim);
-    const opRiskContrib = computeContribution(opRiskResult.score, "operationalRisk", dim);
+    const contribs = computeNormalizedContributions(
+      dim, baselineDimScores[dim], controlResult.score, issueResult.score, bizExtResult.score, opRiskResult.score
+    );
+    const baselineContrib = contribs.baseline;
+    const controlContrib = contribs.controlHealth;
+    const issueContrib = contribs.auditIssueTrend;
+    const bizExtContrib = contribs.businessExternal;
+    const opRiskContrib = contribs.operationalRisk;
 
     totalAdj += adjustedScore;
 
