@@ -41,6 +41,28 @@ interface RegRow {
   "Risk raised (?) / lowered (?)": string;
 }
 
+interface PrcRow {
+  "Control ID": string;
+  "Business Area": string;
+  Control: string;
+  "Design Effectiveness": string;
+  "Operating Effectiveness": string;
+  "Control Type": string;
+}
+
+interface IssueRow {
+  "Audit Unit": string;
+  "Issue Title": string;
+  "Brief Description": string;
+  Severity: string;
+  Status: string;
+  Source: string;
+  "Expected Remediation Date": number | null;
+  "Actual Remediation Date": number | null;
+  "Audit Engagement Name": string;
+  "Report Issuance Date": number | null;
+}
+
 const RISK_DIMENSIONS = [
   "Financial", "Regulatory", "Operational", "Change",
   "Fraud", "Data/Tech", "Reputation"
@@ -51,6 +73,37 @@ const RISK_DIM_INDICES: Record<string, number> = {
   "Fraud": 13, "Data/Tech": 14, "Reputation": 15,
 };
 
+const COMPONENT_WEIGHTS = {
+  baseline: 0.30,
+  controlHealth: 0.25,
+  auditIssueTrend: 0.20,
+  businessExternal: 0.15,
+  operationalRisk: 0.10,
+};
+
+const DIMENSION_RELEVANCE: Record<string, Record<string, number>> = {
+  baseline: {
+    Financial: 0.20, Regulatory: 0.15, Operational: 0.20, Change: 0.10,
+    Fraud: 0.10, "Data/Tech": 0.15, Reputation: 0.10,
+  },
+  controlHealth: {
+    Financial: 0.25, Regulatory: 0.15, Operational: 0.25, Change: 0.05,
+    Fraud: 0.10, "Data/Tech": 0.15, Reputation: 0.05,
+  },
+  auditIssueTrend: {
+    Financial: 0.20, Regulatory: 0.15, Operational: 0.20, Change: 0.10,
+    Fraud: 0.15, "Data/Tech": 0.10, Reputation: 0.10,
+  },
+  businessExternal: {
+    Financial: 0.15, Regulatory: 0.25, Operational: 0.10, Change: 0.10,
+    Fraud: 0.10, "Data/Tech": 0.15, Reputation: 0.15,
+  },
+  operationalRisk: {
+    Financial: 0.10, Regulatory: 0.05, Operational: 0.30, Change: 0.15,
+    Fraud: 0.10, "Data/Tech": 0.25, Reputation: 0.05,
+  },
+};
+
 const SEVERITY_WEIGHT: Record<string, number> = {
   "Severe": 4, "Major": 3, "Moderate": 2, "Minor": 1,
 };
@@ -59,88 +112,59 @@ const PRIORITY_WEIGHT: Record<string, number> = {
   "Critical": 4, "High": 3, "Medium": 2, "Low": 1,
 };
 
-const BIZ_AREA_TO_CATEGORIES: Record<string, string[]> = {
-  "IT": ["Technology"],
-  "Finance": ["Financial Risk", "Finance"],
-  "Operations": ["Operations"],
-  "Customer Service": ["Revenue", "Operations"],
-  "Sales": ["Revenue", "Finance"],
-  "HR": ["HR"],
+const ISSUE_SEVERITY_WEIGHT: Record<string, number> = {
+  "Severe": 5, "High": 4, "Moderate": 3, "Low": 2, "Immaterial": 1,
 };
 
-const BIZ_PROCESS_TO_DIMENSIONS: Record<string, string[]> = {
-  "Financial Reporting": ["Financial"],
-  "Customer Support": ["Reputation", "Operational"],
-  "Order Processing": ["Operational"],
-  "IT Operations": ["Data/Tech", "Operational"],
-  "Payroll": ["Operational", "Fraud"],
-  "Inventory Management": ["Operational", "Change"],
+const ISSUE_STATUS_MULTIPLIER: Record<string, number> = {
+  "Open": 1.0, "In Progress": 0.5, "Closed": 0.2,
 };
 
-const NEWS_RISKTYPE_TO_DIMENSIONS: Record<string, string[]> = {
-  "Fraud Risk": ["Fraud"],
-  "Operational Risk": ["Operational", "Change"],
-  "Market Risk": ["Financial", "Reputation"],
-  "Audit Risk": ["Regulatory"],
+const BIZ_AREA_TO_UNITS: Record<string, string[]> = {
+  "IT": ["Cybersecurity Program", "IT General Controls (ITGCs)", "Data Governance", "Access Management (IAM)", "System Implementations / Change"],
+  "Finance": ["Financial Close & Reporting", "Revenue Recognition / Billing", "Accounts Payable", "Accounts Receivable", "Treasury Operations", "Capital Management"],
+  "Operations": ["Supply Chain & Logistics", "Procurement", "Business Continuity & Disaster Recovery", "Contract Lifecycle Management"],
+  "Customer Service": ["Revenue Recognition / Billing"],
+  "Sales": ["Revenue Recognition / Billing"],
+  "HR": ["Talent Management & HR Compliance", "Payroll"],
 };
 
-const NEWS_CATEGORY_TO_CATEGORIES: Record<string, string[]> = {
-  "Financial risk": ["Financial Risk"],
-  "Finance": ["Finance"],
-  "Operations": ["Operations"],
-  "HR": ["HR"],
-  "Technology": ["Technology"],
-  "Compliance": ["Compliance"],
-  "Governance": ["Governance"],
-  "Legal": ["Legal"],
-  "Facilities": ["Facilities"],
+const NEWS_CATEGORY_TO_UNITS: Record<string, string[]> = {
+  "Financial risk": ["Market Risk Management", "Credit Risk Management", "Liquidity Risk Management", "Capital Management", "Financial Close & Reporting", "Revenue Recognition / Billing", "Treasury Operations"],
+  "Finance": ["Financial Close & Reporting", "Revenue Recognition / Billing", "Accounts Payable", "Accounts Receivable", "Treasury Operations", "Capital Management"],
+  "Operations": ["Supply Chain & Logistics", "Procurement", "Business Continuity & Disaster Recovery", "Contract Lifecycle Management"],
+  "HR": ["Talent Management & HR Compliance", "Payroll"],
+  "Technology": ["Cybersecurity Program", "IT General Controls (ITGCs)", "Data Governance", "System Implementations / Change", "Access Management (IAM)"],
+  "Compliance": ["Regulatory Compliance", "AML / Sanctions", "Privacy & Data Protection"],
+  "Governance": ["Corporate Governance", "Enterprise Risk Management (ERM)", "Strategic Planning & Execution", "ESG / Sustainability Reporting"],
+  "Legal": ["Regulatory Compliance", "Contract Lifecycle Management", "Corporate Governance"],
+  "Facilities": ["Business Continuity & Disaster Recovery", "Supply Chain & Logistics"],
 };
 
-const REG_KEYWORD_TO_CATEGORIES: Record<string, string[]> = {
-  "cyber": ["Technology"],
-  "IT": ["Technology"],
-  "ICT": ["Technology"],
-  "data": ["Technology", "Governance"],
-  "privacy": ["Compliance", "Technology"],
-  "broker": ["Financial Risk", "Revenue"],
-  "investment": ["Financial Risk"],
-  "risk management": ["Governance", "Financial Risk"],
-  "compliance": ["Compliance"],
-  "audit": ["Governance"],
-  "governance": ["Governance"],
-  "vendor": ["Operations", "Technology"],
-  "outsourc": ["Operations"],
-  "payment": ["Finance", "Operations"],
-  "bank": ["Financial Risk", "Finance"],
-  "reporting": ["Finance", "Governance"],
-  "AML": ["Compliance"],
-  "fraud": ["Compliance", "Financial Risk"],
-  "operational resilience": ["Operations", "Technology", "Facilities"],
-  "business continuity": ["Facilities", "Operations"],
-  "incident": ["Technology", "Operations"],
-  "transfer agent": ["Operations", "Finance"],
-  "access management": ["Technology"],
-};
-
-const REG_KEYWORD_TO_DIMENSIONS: Record<string, string[]> = {
-  "cyber": ["Data/Tech", "Operational"],
-  "IT": ["Data/Tech"],
-  "ICT": ["Data/Tech", "Operational"],
-  "privacy": ["Regulatory", "Reputation"],
-  "data": ["Data/Tech"],
-  "incident": ["Operational"],
-  "compliance": ["Regulatory"],
-  "governance": ["Regulatory"],
-  "fraud": ["Fraud"],
-  "risk management": ["Operational"],
-  "vendor": ["Operational", "Change"],
-  "outsourc": ["Operational", "Change"],
-  "reporting": ["Financial", "Regulatory"],
-  "breach": ["Data/Tech", "Reputation"],
-  "operational resilience": ["Operational", "Change"],
-  "business continuity": ["Operational", "Change"],
-  "access management": ["Data/Tech", "Fraud"],
-  "AML": ["Regulatory", "Fraud"],
+const REG_KEYWORD_TO_UNITS: Record<string, string[]> = {
+  "cyber": ["Cybersecurity Program", "IT General Controls (ITGCs)", "Access Management (IAM)"],
+  "IT": ["IT General Controls (ITGCs)", "System Implementations / Change", "Data Governance"],
+  "ICT": ["IT General Controls (ITGCs)", "System Implementations / Change", "Cybersecurity Program"],
+  "data": ["Data Governance", "Privacy & Data Protection", "IT General Controls (ITGCs)"],
+  "privacy": ["Privacy & Data Protection", "Regulatory Compliance", "Data Governance"],
+  "broker": ["Revenue Recognition / Billing", "Market Risk Management"],
+  "investment": ["Capital Management", "Market Risk Management", "Treasury Operations"],
+  "risk management": ["Enterprise Risk Management (ERM)", "Market Risk Management", "Credit Risk Management"],
+  "compliance": ["Regulatory Compliance", "AML / Sanctions"],
+  "audit": ["Corporate Governance", "Enterprise Risk Management (ERM)"],
+  "governance": ["Corporate Governance", "Enterprise Risk Management (ERM)"],
+  "vendor": ["Third-Party Risk Management", "Procurement", "Supply Chain & Logistics"],
+  "outsourc": ["Third-Party Risk Management", "Procurement"],
+  "payment": ["Accounts Payable", "Treasury Operations"],
+  "bank": ["Treasury Operations", "Capital Management", "Liquidity Risk Management"],
+  "reporting": ["Financial Close & Reporting", "ESG / Sustainability Reporting", "Revenue Recognition / Billing"],
+  "AML": ["AML / Sanctions", "Regulatory Compliance"],
+  "fraud": ["AML / Sanctions", "Revenue Recognition / Billing"],
+  "operational resilience": ["Business Continuity & Disaster Recovery", "Cybersecurity Program"],
+  "business continuity": ["Business Continuity & Disaster Recovery"],
+  "incident": ["Cybersecurity Program", "IT General Controls (ITGCs)"],
+  "transfer agent": ["Accounts Receivable", "Revenue Recognition / Billing"],
+  "access management": ["Access Management (IAM)"],
 };
 
 function clamp(val: number, min: number, max: number): number {
@@ -148,31 +172,38 @@ function clamp(val: number, min: number, max: number): number {
 }
 
 function scaleScore(raw: number): number {
-  const scaled = clamp((raw / 5) * 100, 0, 100);
-  if (scaled >= 100) return Math.floor(Math.random() * 16 + 75);
-  return scaled;
+  return clamp((raw / 5) * 100, 0, 100);
 }
 
 const ACTION_MAP: Record<string, Record<string, string>> = {
-  "incident": {
-    "Financial": "Review financial reporting controls and assess root causes of incidents impacting financial processes.",
-    "Regulatory": "Evaluate regulatory compliance controls affected by recent incidents and update remediation plans.",
-    "Operational": "Strengthen operational procedures and incident response playbooks to reduce recurrence.",
-    "Change": "Assess change management processes for gaps exposed by recent incidents.",
-    "Fraud": "Investigate fraud indicators surfaced by incidents and strengthen detection mechanisms.",
-    "Data/Tech": "Review IT infrastructure resilience and patch management following technology incidents.",
-    "Reputation": "Prepare stakeholder communication plans addressing reputational impact from incidents.",
+  "baseline": {
+    "Financial": "Review and recalibrate baseline financial risk assumptions based on current business conditions.",
+    "Regulatory": "Validate baseline regulatory risk ratings against current compliance obligations.",
+    "Operational": "Reassess baseline operational risk parameters for process maturity changes.",
+    "Change": "Evaluate whether baseline change risk still reflects current transformation pace.",
+    "Fraud": "Update baseline fraud risk indicators to reflect current threat landscape.",
+    "Data/Tech": "Review baseline technology risk scores for relevance to current IT architecture.",
+    "Reputation": "Assess whether baseline reputational risk captures current stakeholder dynamics.",
   },
-  "regulatory": {
-    "Financial": "Perform gap assessment against new financial reporting requirements and update policies.",
-    "Regulatory": "Map new regulatory requirements to existing controls and identify compliance gaps.",
-    "Operational": "Update operational procedures to align with new regulatory mandates.",
-    "Change": "Incorporate regulatory changes into change management and project planning frameworks.",
-    "Fraud": "Enhance anti-fraud programs to comply with updated regulatory fraud prevention standards.",
-    "Data/Tech": "Begin DORA/cyber regulation compliance gap assessment and strengthen IT controls.",
-    "Reputation": "Ensure public disclosures and governance communications meet new transparency standards.",
+  "controlHealth": {
+    "Financial": "Strengthen financial controls with design and operating effectiveness gaps; prioritize remediation.",
+    "Regulatory": "Address regulatory control weaknesses; ensure both design and operating effectiveness.",
+    "Operational": "Fix operational control gaps; focus on controls lacking operating effectiveness.",
+    "Change": "Review change management controls for design adequacy and operating execution.",
+    "Fraud": "Enhance anti-fraud controls where effectiveness gaps exist; deploy compensating controls.",
+    "Data/Tech": "Remediate IT controls with effectiveness issues; prioritize access and data integrity controls.",
+    "Reputation": "Strengthen governance controls to prevent reputational incidents from control failures.",
   },
-  "news": {
+  "auditIssueTrend": {
+    "Financial": "Accelerate remediation of open financial audit issues; escalate severe/high findings.",
+    "Regulatory": "Prioritize closure of regulatory compliance audit findings before deadlines.",
+    "Operational": "Address operational audit issues contributing to elevated risk; track remediation progress.",
+    "Change": "Resolve change management audit findings; ensure issues don't block transformation.",
+    "Fraud": "Close fraud-related audit issues urgently; validate remediation effectiveness.",
+    "Data/Tech": "Remediate IT audit findings; focus on data governance and access control issues.",
+    "Reputation": "Address audit issues that could surface as reputational concerns if left unresolved.",
+  },
+  "businessExternal": {
     "Financial": "Monitor market conditions highlighted by news signals and stress-test financial risk models.",
     "Regulatory": "Track emerging regulatory trends from industry news and prepare proactive responses.",
     "Operational": "Evaluate operational resilience against risks flagged by market intelligence.",
@@ -181,10 +212,10 @@ const ACTION_MAP: Record<string, Record<string, string>> = {
     "Data/Tech": "Evaluate technology risk posture against cyber threats highlighted in news coverage.",
     "Reputation": "Monitor media sentiment and prepare crisis communication plans if trends worsen.",
   },
-  "cyber": {
+  "operationalRisk": {
     "Financial": "Assess financial exposure from vendor vulnerabilities and ensure cyber insurance coverage is adequate.",
     "Regulatory": "Verify vendor compliance with cybersecurity regulatory requirements (DORA, SEC cyber rules).",
-    "Operational": "Review vendor SLAs and business continuity plans for critical technology dependencies.",
+    "Operational": "Review vendor SLAs and incident response for critical technology dependencies.",
     "Change": "Prioritize patching and vendor upgrades for systems with known exploited vulnerabilities.",
     "Fraud": "Evaluate whether vendor vulnerabilities could enable unauthorized access or fraud schemes.",
     "Data/Tech": "Conduct vulnerability assessments on affected vendor products and accelerate patching cycles.",
@@ -192,45 +223,76 @@ const ACTION_MAP: Record<string, Record<string, string>> = {
   },
 };
 
+export interface ControlHealthDriver {
+  controlId: string;
+  control: string;
+  controlType: string;
+  designEffectiveness: string;
+  operatingEffectiveness: string;
+  score: number;
+}
+
+export interface AuditIssueDriver {
+  issueTitle: string;
+  description: string;
+  severity: string;
+  status: string;
+  source: string;
+  auditEngagement: string;
+  weightedScore: number;
+}
+
+export interface IncidentDriver {
+  id: string;
+  title: string;
+  severity: string;
+  priority: string;
+  impact: number;
+  process: string;
+}
+
+export interface RegDriver {
+  regulator: string;
+  rule: string;
+  direction: string;
+  impact: number;
+}
+
+export interface NewsDriver {
+  headline: string;
+  sentiment: string;
+  riskType: string;
+  source: string;
+}
+
+export interface CyberDriver {
+  cveId: string;
+  vendor: string;
+  product: string;
+  name: string;
+  ransomware: boolean;
+}
+
 export interface DimensionDriver {
   dimension: string;
   baseScore: number;
   adjustedScore: number;
-  incidentAdjustment: number;
-  regulatoryAdjustment: number;
-  newsAdjustment: number;
-  cyberAdjustment: number;
-  incidentDrivers: Array<{
-    id: string;
-    title: string;
-    severity: string;
-    priority: string;
-    impact: number;
-    process: string;
-  }>;
-  regulatoryDrivers: Array<{
-    regulator: string;
-    rule: string;
-    direction: string;
-    impact: number;
-  }>;
-  newsDrivers: Array<{
-    headline: string;
-    sentiment: string;
-    riskType: string;
-    source: string;
-  }>;
-  cyberDrivers: Array<{
-    cveId: string;
-    vendor: string;
-    product: string;
-    name: string;
-    ransomware: boolean;
-  }>;
-  incidentAction: string;
-  regulatoryAction: string;
-  newsAction: string;
-  cyberAction: string;
+  baselineContribution: number;
+  controlHealthContribution: number;
+  auditIssueTrendContribution: number;
+  businessExternalContribution: number;
+  operationalRiskContribution: number;
+  controlHealthDrivers: ControlHealthDriver[];
+  auditIssueDrivers: AuditIssueDriver[];
+  incidentDrivers: IncidentDriver[];
+  regulatoryDrivers: RegDriver[];
+  newsDrivers: NewsDriver[];
+  cyberDrivers: CyberDriver[];
+  baselineAction: string;
+  controlHealthAction: string;
+  auditIssueAction: string;
+  businessExternalAction: string;
+  operationalRiskAction: string;
 }
 
 export interface DriversResponse {
@@ -238,6 +300,13 @@ export interface DriversResponse {
   sectorCategory: string;
   averageAdjustedScore: number;
   severity: string;
+  componentScores: {
+    baseline: number;
+    controlHealth: number;
+    auditIssueTrend: number;
+    businessExternal: number;
+    operationalRisk: number;
+  };
   dimensions: DimensionDriver[];
 }
 
@@ -248,6 +317,9 @@ let cachedData: {
   news: NewsRow[];
   vendors: VendorRow[];
   cves: CveRow[];
+  prcRows: PrcRow[];
+  issueRows: IssueRow[];
+  unitNames: string[];
 } | null = null;
 
 async function loadData() {
@@ -279,176 +351,368 @@ async function loadData() {
   const cveWb = XLSX.readFile(cvePath);
   const cves: CveRow[] = XLSX.utils.sheet_to_json(cveWb.Sheets["known_exploited_vulnerabilities"]);
 
-  cachedData = { auditRows, incidents, regs, news, vendors, cves };
+  const prcPath = path.resolve("attached_assets/PRC_updated_1771952095993.xlsx");
+  const prcWb = XLSX.readFile(prcPath);
+  const prcRows: PrcRow[] = XLSX.utils.sheet_to_json(prcWb.Sheets["Sheet2"]);
+
+  const issuePath = path.resolve("attached_assets/Issue_details_no_quarter_1771952095994.xlsx");
+  const issueWb = XLSX.readFile(issuePath);
+  const issueRows: IssueRow[] = XLSX.utils.sheet_to_json(issueWb.Sheets["Sheet1"]);
+
+  const dataRows = auditRows.slice(3).filter((r: any[]) => r[2]);
+  const unitNames = dataRows.map((r: any[]) => String(r[2]));
+
+  cachedData = { auditRows, incidents, regs, news, vendors, cves, prcRows, issueRows, unitNames };
   return cachedData;
 }
 
+function computeUnitControlHealthScore(prcRows: PrcRow[], unitName: string): { score: number; drivers: ControlHealthDriver[] } {
+  const unitControls = prcRows.filter(r => r["Business Area"].trim() === unitName);
+  if (unitControls.length === 0) return { score: 50, drivers: [] };
+
+  const drivers: ControlHealthDriver[] = unitControls.map(row => {
+    const designOk = row["Design Effectiveness"] === "Effective";
+    const operatingOk = row["Operating Effectiveness"] === "Effective";
+    let controlScore: number;
+    if (designOk && operatingOk) controlScore = 100;
+    else if (designOk && !operatingOk) controlScore = 50;
+    else if (!designOk && operatingOk) controlScore = 40;
+    else controlScore = 0;
+
+    return {
+      controlId: row["Control ID"],
+      control: row.Control,
+      controlType: row["Control Type"],
+      designEffectiveness: row["Design Effectiveness"],
+      operatingEffectiveness: row["Operating Effectiveness"],
+      score: controlScore,
+    };
+  });
+
+  const avg = drivers.reduce((a, b) => a + b.score, 0) / drivers.length;
+  return { score: Math.round(avg * 10) / 10, drivers };
+}
+
+function computeUnitAuditIssueTrendScore(
+  issueRows: IssueRow[], unitName: string, unitNames: string[]
+): { score: number; drivers: AuditIssueDriver[] } {
+  const unitIssues = issueRows.filter(r => r["Audit Unit"]?.trim() === unitName);
+
+  const drivers: AuditIssueDriver[] = unitIssues.map(issue => {
+    const sevWeight = ISSUE_SEVERITY_WEIGHT[issue.Severity] || 1;
+    const statusMult = ISSUE_STATUS_MULTIPLIER[issue.Status] || 1.0;
+    return {
+      issueTitle: issue["Issue Title"],
+      description: issue["Brief Description"],
+      severity: issue.Severity,
+      status: issue.Status,
+      source: issue.Source,
+      auditEngagement: issue["Audit Engagement Name"],
+      weightedScore: sevWeight * statusMult,
+    };
+  });
+
+  const unitWeightedTotal = drivers.reduce((a, b) => a + b.weightedScore, 0);
+
+  let maxWeighted = 0;
+  for (const name of unitNames) {
+    const issues = issueRows.filter(r => r["Audit Unit"]?.trim() === name);
+    let total = 0;
+    for (const issue of issues) {
+      const sev = ISSUE_SEVERITY_WEIGHT[issue.Severity] || 1;
+      const status = ISSUE_STATUS_MULTIPLIER[issue.Status] || 1.0;
+      total += sev * status;
+    }
+    if (total > maxWeighted) maxWeighted = total;
+  }
+
+  const score = maxWeighted > 0 ? Math.round((unitWeightedTotal / maxWeighted) * 100 * 10) / 10 : 0;
+  return { score, drivers: drivers.sort((a, b) => b.weightedScore - a.weightedScore).slice(0, 10) };
+}
+
+function computeUnitBusinessExternalScore(
+  newsRows: NewsRow[], regRows: RegRow[], unitName: string
+): { score: number; newsDrivers: NewsDriver[]; regulatoryDrivers: RegDriver[] } {
+  const matchedNews: NewsDriver[] = [];
+  const scores: number[] = [];
+
+  for (const article of newsRows) {
+    const matchedUnits = NEWS_CATEGORY_TO_UNITS[article.Category] || [];
+    if (matchedUnits.includes(unitName)) {
+      const sentimentScore = article.Sentiment === "Negative" ? 80 : article.Sentiment === "Neutral" ? 50 : 20;
+      scores.push(sentimentScore);
+      matchedNews.push({
+        headline: article.Headline,
+        sentiment: article.Sentiment,
+        riskType: article.Risk_Type,
+        source: article.Source,
+      });
+    }
+  }
+
+  const matchedRegs: RegDriver[] = [];
+  for (const reg of regRows) {
+    const areasText = (reg["Impacted business areas"] || "").toLowerCase();
+    const processText = (reg["Impacted processes"] || "").toLowerCase();
+    const riskText = (reg["Risk raised (?) / lowered (?)"] || "");
+    const combinedText = areasText + " " + processText;
+
+    const raisedCount = (riskText.match(/↑/g) || []).length + (riskText.match(/\?.*risk/gi) || []).length;
+    const loweredCount = (riskText.match(/↓/g) || []).length;
+    const direction = raisedCount >= loweredCount ? 1 : -0.5;
+    const regScore = direction > 0 ? 75 : 30;
+
+    const matchedUnits = new Set<string>();
+    for (const [keyword, units] of Object.entries(REG_KEYWORD_TO_UNITS)) {
+      if (combinedText.includes(keyword.toLowerCase())) {
+        units.forEach(u => matchedUnits.add(u));
+      }
+    }
+
+    if (matchedUnits.has(unitName)) {
+      scores.push(regScore);
+      matchedRegs.push({
+        regulator: reg.Regulator,
+        rule: (reg["Rule / Release"] || "").substring(0, 120),
+        direction: direction > 0 ? "Raised" : "Lowered",
+        impact: Math.round(direction * 3 * 10) / 10,
+      });
+    }
+  }
+
+  const score = scores.length > 0
+    ? Math.round(clamp(scores.reduce((a, b) => a + b, 0) / scores.length, 0, 100) * 10) / 10
+    : 50;
+
+  return { score, newsDrivers: matchedNews.slice(0, 5), regulatoryDrivers: matchedRegs };
+}
+
+function computeUnitOperationalRiskScore(
+  incidents: IncidentRow[], vendors: VendorRow[], cves: CveRow[], unitName: string, unitNames: string[]
+): { score: number; incidentDrivers: IncidentDriver[]; cyberDrivers: CyberDriver[] } {
+  const matchedIncidents: IncidentDriver[] = [];
+  let unitIncidentScore = 0;
+
+  for (const inc of incidents) {
+    const matchedUnits = BIZ_AREA_TO_UNITS[inc["Impacted Business Areas"]] || [];
+    if (matchedUnits.includes(unitName)) {
+      const sev = SEVERITY_WEIGHT[inc["Risk Severity"]] || 1;
+      const pri = PRIORITY_WEIGHT[inc.Priority] || 1;
+      const impact = sev * pri;
+      unitIncidentScore += impact;
+      matchedIncidents.push({
+        id: inc["Incident ID"],
+        title: inc["Incident Title"],
+        severity: inc["Risk Severity"],
+        priority: inc.Priority,
+        impact,
+        process: inc["Impacted Business Process"],
+      });
+    }
+  }
+
+  let maxIncidentScore = 0;
+  for (const name of unitNames) {
+    let total = 0;
+    for (const inc of incidents) {
+      const matchedUnits = BIZ_AREA_TO_UNITS[inc["Impacted Business Areas"]] || [];
+      if (matchedUnits.includes(name)) {
+        total += (SEVERITY_WEIGHT[inc["Risk Severity"]] || 1) * (PRIORITY_WEIGHT[inc.Priority] || 1);
+      }
+    }
+    if (total > maxIncidentScore) maxIncidentScore = total;
+  }
+
+  const vendorRow = vendors.find(v => v["Auditable Unit"].trim() === unitName);
+  const unitVendors = vendorRow ? vendorRow.Vendors.split(",").map(v => v.trim()) : [];
+  const matchedCves: CyberDriver[] = [];
+  const seenCveIds = new Set<string>();
+
+  const vendorToCves = new Map<string, { total: number; ransomware: number }>();
+  for (const cve of cves) {
+    const vendorLower = cve.vendorProject.toLowerCase().trim();
+    if (!vendorToCves.has(vendorLower)) vendorToCves.set(vendorLower, { total: 0, ransomware: 0 });
+    const entry = vendorToCves.get(vendorLower)!;
+    entry.total++;
+    if (cve.knownRansomwareCampaignUse === "Known") entry.ransomware++;
+  }
+
+  let unitCyberScore = 0;
+  for (const vendor of unitVendors) {
+    const vendorLower = vendor.toLowerCase();
+    for (const cve of cves) {
+      const cveVendor = cve.vendorProject.toLowerCase().trim();
+      let matched = false;
+      if (cveVendor.includes(vendorLower) || vendorLower.includes(cveVendor)) {
+        matched = true;
+      } else {
+        const vendorWords = vendorLower.split(/\s+/);
+        const cveWords = cveVendor.split(/\s+/);
+        if (vendorWords.length > 0 && cveWords.some(w => vendorWords.includes(w) && w.length > 3)) {
+          matched = true;
+        }
+      }
+      if (matched && !seenCveIds.has(cve.cveID)) {
+        seenCveIds.add(cve.cveID);
+        if (matchedCves.length < 5) {
+          matchedCves.push({
+            cveId: cve.cveID,
+            vendor: cve.vendorProject,
+            product: cve.product,
+            name: cve.vulnerabilityName.substring(0, 100),
+            ransomware: cve.knownRansomwareCampaignUse === "Known",
+          });
+        }
+      }
+    }
+    let matchedTotal = 0;
+    let matchedRansomware = 0;
+    let found = false;
+    vendorToCves.forEach((stats, cveVendor) => {
+      if (found) return;
+      if (cveVendor.includes(vendorLower) || vendorLower.includes(cveVendor)) {
+        matchedTotal = stats.total; matchedRansomware = stats.ransomware; found = true; return;
+      }
+      const vendorWords = vendorLower.split(/\s+/);
+      const cveWords = cveVendor.split(/\s+/);
+      if (vendorWords.length > 0 && cveWords.some((w: string) => vendorWords.includes(w) && w.length > 3)) {
+        matchedTotal = stats.total; matchedRansomware = stats.ransomware; found = true; return;
+      }
+    });
+    if (found) {
+      unitCyberScore += matchedTotal + matchedRansomware * 2;
+    }
+  }
+  if (unitVendors.length > 0) {
+    unitCyberScore = clamp((unitCyberScore / unitVendors.length) / 40, 0, 1) * 100;
+  }
+
+  let maxCyberScore = 0;
+  for (const name of unitNames) {
+    const vr = vendors.find(v => v["Auditable Unit"].trim() === name);
+    if (!vr) continue;
+    const vs = vr.Vendors.split(",").map(v => v.trim());
+    let total = 0;
+    for (const v of vs) {
+      const vl = v.toLowerCase();
+      vendorToCves.forEach((stats, cv) => {
+        if (cv.includes(vl) || vl.includes(cv)) { total += stats.total + stats.ransomware * 2; return; }
+        const vw = vl.split(/\s+/);
+        const cw = cv.split(/\s+/);
+        if (vw.length > 0 && cw.some((w: string) => vw.includes(w) && w.length > 3)) { total += stats.total + stats.ransomware * 2; return; }
+      });
+    }
+    const norm = vs.length > 0 ? clamp((total / vs.length) / 40, 0, 1) * 100 : 0;
+    if (norm > maxCyberScore) maxCyberScore = norm;
+  }
+
+  const incidentNorm = maxIncidentScore > 0 ? (unitIncidentScore / maxIncidentScore) * 100 : 0;
+  const cyberNorm = maxCyberScore > 0 ? (unitCyberScore / maxCyberScore) * 100 : 0;
+  const score = Math.round(clamp(incidentNorm * 0.4 + cyberNorm * 0.6, 0, 100) * 10) / 10;
+
+  return {
+    score,
+    incidentDrivers: matchedIncidents.sort((a, b) => b.impact - a.impact).slice(0, 5),
+    cyberDrivers: matchedCves,
+  };
+}
+
+function computeFinalDimensionScore(
+  dimension: string,
+  baselineScore: number,
+  controlHealthScore: number,
+  auditIssueTrendScore: number,
+  businessExternalScore: number,
+  operationalRiskScore: number,
+): number {
+  let weightedSum = 0;
+  let maxPossible = 0;
+
+  const components = [
+    { key: "baseline", score: baselineScore },
+    { key: "controlHealth", score: controlHealthScore },
+    { key: "auditIssueTrend", score: auditIssueTrendScore },
+    { key: "businessExternal", score: businessExternalScore },
+    { key: "operationalRisk", score: operationalRiskScore },
+  ];
+
+  for (const comp of components) {
+    const compWeight = COMPONENT_WEIGHTS[comp.key as keyof typeof COMPONENT_WEIGHTS];
+    const dimRelevance = DIMENSION_RELEVANCE[comp.key][dimension];
+    weightedSum += comp.score * compWeight * dimRelevance;
+    maxPossible += 100 * compWeight * dimRelevance;
+  }
+
+  if (maxPossible === 0) return 0;
+  return Math.round((weightedSum / maxPossible) * 100 * 10) / 10;
+}
+
+function computeContribution(componentScore: number, componentKey: string, dimension: string): number {
+  const compWeight = COMPONENT_WEIGHTS[componentKey as keyof typeof COMPONENT_WEIGHTS];
+  const dimRelevance = DIMENSION_RELEVANCE[componentKey][dimension];
+  return Math.round(componentScore * compWeight * dimRelevance * 10) / 10;
+}
+
 export async function computeDriversForSector(sectorName: string): Promise<DriversResponse | null> {
-  const { auditRows, incidents, regs, news, vendors, cves } = await loadData();
+  const data = await loadData();
+  const { auditRows, incidents, regs, news, vendors, cves, prcRows, issueRows, unitNames } = data;
 
   const dataRows = auditRows.slice(3).filter((r: any[]) => r[2]);
   const row = dataRows.find((r: any[]) => String(r[2]) === sectorName);
   if (!row) return null;
 
   const category = String(row[0] || "General");
+
+  const controlResult = computeUnitControlHealthScore(prcRows, sectorName);
+  const issueResult = computeUnitAuditIssueTrendScore(issueRows, sectorName, unitNames);
+  const bizExtResult = computeUnitBusinessExternalScore(news, regs, sectorName);
+  const opRiskResult = computeUnitOperationalRiskScore(incidents, vendors, cves, sectorName, unitNames);
+
+  const baselineDimScores: Record<string, number> = {};
+  for (const dim of RISK_DIMENSIONS) {
+    const colIdx = RISK_DIM_INDICES[dim];
+    baselineDimScores[dim] = scaleScore(Number(row[colIdx]) || 0);
+  }
+  const baselineAvg = Object.values(baselineDimScores).reduce((a, b) => a + b, 0) / RISK_DIMENSIONS.length;
+
   const dimensions: DimensionDriver[] = [];
   let totalAdj = 0;
 
   for (const dim of RISK_DIMENSIONS) {
-    const colIdx = RISK_DIM_INDICES[dim];
-    const rawScore = Number(row[colIdx]) || 0;
-    const baseScaled = scaleScore(rawScore);
+    const baseScore = Math.round(baselineDimScores[dim]);
 
-    const matchingIncidents = incidents.filter(inc => {
-      const cats = BIZ_AREA_TO_CATEGORIES[inc["Impacted Business Areas"]] || [];
-      const dims = BIZ_PROCESS_TO_DIMENSIONS[inc["Impacted Business Process"]] || [];
-      return cats.includes(category) && dims.includes(dim);
-    });
+    const adjustedScore = computeFinalDimensionScore(
+      dim, baselineDimScores[dim], controlResult.score, issueResult.score, bizExtResult.score, opRiskResult.score
+    );
 
-    let incidentAdj = 0;
-    if (matchingIncidents.length > 0) {
-      const totalImpact = matchingIncidents.reduce((sum, inc) => {
-        const sev = SEVERITY_WEIGHT[inc["Risk Severity"]] || 1;
-        const pri = PRIORITY_WEIGHT[inc.Priority] || 1;
-        return sum + sev * pri;
-      }, 0);
-      incidentAdj = clamp((totalImpact / matchingIncidents.length / 16) * 10, 0, 10);
-    }
+    const baselineContrib = computeContribution(baselineDimScores[dim], "baseline", dim);
+    const controlContrib = computeContribution(controlResult.score, "controlHealth", dim);
+    const issueContrib = computeContribution(issueResult.score, "auditIssueTrend", dim);
+    const bizExtContrib = computeContribution(bizExtResult.score, "businessExternal", dim);
+    const opRiskContrib = computeContribution(opRiskResult.score, "operationalRisk", dim);
 
-    const matchingRegs: Array<{ reg: RegRow; direction: number; dims: Set<string> }> = [];
-    for (const reg of regs) {
-      const areasText = (reg["Impacted business areas"] || "").toLowerCase();
-      const processText = (reg["Impacted processes"] || "").toLowerCase();
-      const riskText = (reg["Risk raised (?) / lowered (?)"] || "");
-      const combinedText = areasText + " " + processText;
-
-      const raisedCount = (riskText.match(/↑/g) || []).length + (riskText.match(/\?.*risk/gi) || []).length;
-      const loweredCount = (riskText.match(/↓/g) || []).length;
-      const netDirection = raisedCount >= loweredCount ? 1 : -0.5;
-
-      const matchedCats = new Set<string>();
-      const matchedDims = new Set<string>();
-
-      for (const [keyword, cats] of Object.entries(REG_KEYWORD_TO_CATEGORIES)) {
-        if (combinedText.includes(keyword.toLowerCase())) {
-          cats.forEach(c => matchedCats.add(c));
-        }
-      }
-      for (const [keyword, dims] of Object.entries(REG_KEYWORD_TO_DIMENSIONS)) {
-        if (combinedText.includes(keyword.toLowerCase())) {
-          dims.forEach(d => matchedDims.add(d));
-        }
-      }
-      matchedDims.add("Regulatory");
-      if (matchedCats.size === 0) {
-        matchedCats.add("Governance");
-        matchedCats.add("Compliance");
-      }
-
-      if (matchedCats.has(category) && matchedDims.has(dim)) {
-        matchingRegs.push({ reg, direction: netDirection, dims: matchedDims });
-      }
-    }
-
-    let regAdj = 0;
-    if (matchingRegs.length > 0) {
-      regAdj = clamp(matchingRegs.reduce((sum, r) => sum + 3 * r.direction, 0), -8, 8);
-    }
-
-    const matchingNews = news.filter(article => {
-      const cats = NEWS_CATEGORY_TO_CATEGORIES[article.Category] || [];
-      const dims = NEWS_RISKTYPE_TO_DIMENSIONS[article.Risk_Type] || [];
-      return cats.includes(category) && dims.includes(dim);
-    });
-
-    let newsAdj = 0;
-    if (matchingNews.length > 0) {
-      const totalSentiment = matchingNews.reduce((sum, a) => {
-        return sum + (a.Sentiment === "Negative" ? 2 : a.Sentiment === "Neutral" ? 0 : -1);
-      }, 0);
-      newsAdj = clamp((totalSentiment / matchingNews.length) * 3, -8, 8);
-    }
-
-    const vendorRow = vendors.find(v => v["Auditable Unit"].trim() === sectorName);
-    const unitVendors = vendorRow ? vendorRow.Vendors.split(",").map(v => v.trim()) : [];
-    const matchingCves: CveRow[] = [];
-    const CYBER_DIMS = ["Data/Tech", "Operational", "Fraud", "Reputation"];
-
-    if (CYBER_DIMS.includes(dim) && unitVendors.length > 0) {
-      for (const vendor of unitVendors) {
-        const vendorLower = vendor.toLowerCase();
-        for (const cve of cves) {
-          const cveVendor = cve.vendorProject.toLowerCase().trim();
-          if (cveVendor.includes(vendorLower) || vendorLower.includes(cveVendor)) {
-            matchingCves.push(cve);
-            continue;
-          }
-          const vendorWords = vendorLower.split(/\s+/);
-          const cveWords = cveVendor.split(/\s+/);
-          if (vendorWords.length > 0 && cveWords.some(w => vendorWords.includes(w) && w.length > 3)) {
-            matchingCves.push(cve);
-          }
-        }
-      }
-    }
-
-    let cyberAdj = 0;
-    if (matchingCves.length > 0 && unitVendors.length > 0) {
-      const ransomwareCount = matchingCves.filter(c => c.knownRansomwareCampaignUse === "Known").length;
-      const totalWeighted = matchingCves.length + ransomwareCount * 2;
-      const avgPerVendor = totalWeighted / unitVendors.length;
-      const normalized = clamp(avgPerVendor / 40, 0, 1);
-      const dimWeights: Record<string, number> = { "Data/Tech": 12, "Operational": 8, "Fraud": 5, "Reputation": 4 };
-      cyberAdj = clamp(Math.round(normalized * (dimWeights[dim] || 0) * 10) / 10, 0, 12);
-    }
-
-    const adjustedScore = clamp(Math.round(baseScaled + incidentAdj + regAdj + newsAdj + cyberAdj), 0, 98);
     totalAdj += adjustedScore;
-
-    const uniqueCves = new Map<string, CveRow>();
-    for (const cve of matchingCves) {
-      if (!uniqueCves.has(cve.cveID)) uniqueCves.set(cve.cveID, cve);
-    }
 
     dimensions.push({
       dimension: dim,
-      baseScore: Math.round(baseScaled),
+      baseScore,
       adjustedScore,
-      incidentAdjustment: Math.round(incidentAdj * 10) / 10,
-      regulatoryAdjustment: Math.round(regAdj * 10) / 10,
-      newsAdjustment: Math.round(newsAdj * 10) / 10,
-      cyberAdjustment: Math.round(cyberAdj * 10) / 10,
-      incidentDrivers: matchingIncidents.slice(0, 5).map(inc => ({
-        id: inc["Incident ID"],
-        title: inc["Incident Title"],
-        severity: inc["Risk Severity"],
-        priority: inc.Priority,
-        impact: (SEVERITY_WEIGHT[inc["Risk Severity"]] || 1) * (PRIORITY_WEIGHT[inc.Priority] || 1),
-        process: inc["Impacted Business Process"],
-      })),
-      regulatoryDrivers: matchingRegs.map(r => ({
-        regulator: r.reg.Regulator,
-        rule: (r.reg["Rule / Release"] || "").substring(0, 120),
-        direction: r.direction > 0 ? "Raised" : "Lowered",
-        impact: Math.round(3 * r.direction * 10) / 10,
-      })),
-      newsDrivers: matchingNews.slice(0, 5).map(a => ({
-        headline: a.Headline,
-        sentiment: a.Sentiment,
-        riskType: a.Risk_Type,
-        source: a.Source,
-      })),
-      cyberDrivers: Array.from(uniqueCves.values()).slice(0, 5).map(c => ({
-        cveId: c.cveID,
-        vendor: c.vendorProject,
-        product: c.product,
-        name: c.vulnerabilityName.substring(0, 100),
-        ransomware: c.knownRansomwareCampaignUse === "Known",
-      })),
-      incidentAction: matchingIncidents.length > 0 ? (ACTION_MAP["incident"][dim] || "") : "",
-      regulatoryAction: matchingRegs.length > 0 ? (ACTION_MAP["regulatory"][dim] || "") : "",
-      newsAction: matchingNews.length > 0 ? (ACTION_MAP["news"][dim] || "") : "",
-      cyberAction: matchingCves.length > 0 ? (ACTION_MAP["cyber"][dim] || "") : "",
+      baselineContribution: baselineContrib,
+      controlHealthContribution: controlContrib,
+      auditIssueTrendContribution: issueContrib,
+      businessExternalContribution: bizExtContrib,
+      operationalRiskContribution: opRiskContrib,
+      controlHealthDrivers: controlResult.drivers.filter(d => d.score < 100).slice(0, 5),
+      auditIssueDrivers: issueResult.drivers.slice(0, 5),
+      incidentDrivers: opRiskResult.incidentDrivers,
+      regulatoryDrivers: bizExtResult.regulatoryDrivers,
+      newsDrivers: bizExtResult.newsDrivers,
+      cyberDrivers: opRiskResult.cyberDrivers,
+      baselineAction: ACTION_MAP["baseline"][dim] || "",
+      controlHealthAction: controlResult.drivers.some(d => d.score < 100) ? (ACTION_MAP["controlHealth"][dim] || "") : "",
+      auditIssueAction: issueResult.drivers.length > 0 ? (ACTION_MAP["auditIssueTrend"][dim] || "") : "",
+      businessExternalAction: (bizExtResult.newsDrivers.length > 0 || bizExtResult.regulatoryDrivers.length > 0) ? (ACTION_MAP["businessExternal"][dim] || "") : "",
+      operationalRiskAction: (opRiskResult.incidentDrivers.length > 0 || opRiskResult.cyberDrivers.length > 0) ? (ACTION_MAP["operationalRisk"][dim] || "") : "",
     });
   }
 
@@ -459,6 +723,13 @@ export async function computeDriversForSector(sectorName: string): Promise<Drive
     sectorCategory: category,
     averageAdjustedScore: avgScore,
     severity: avgScore >= 90 ? "critical" : avgScore >= 75 ? "high" : avgScore >= 40 ? "medium" : "low",
+    componentScores: {
+      baseline: Math.round(baselineAvg),
+      controlHealth: Math.round(controlResult.score),
+      auditIssueTrend: Math.round(issueResult.score),
+      businessExternal: Math.round(bizExtResult.score),
+      operationalRisk: Math.round(opRiskResult.score),
+    },
     dimensions,
   };
 }

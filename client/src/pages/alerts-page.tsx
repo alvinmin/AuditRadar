@@ -37,11 +37,11 @@ const severityConfig: Record<string, { icon: typeof AlertTriangle; color: string
   },
 };
 
-function extractScoreChange(title: string): string {
-  const match = title.match(/[+-]?\d+\.?\d*/);
-  if (!match) return "+?";
-  const val = parseFloat(match[0]);
-  return val >= 0 ? `+${val.toFixed(1)}` : val.toFixed(1);
+function extractAvgScore(title: string): string {
+  const match = title.match(/avg\s+([\d.]+)/);
+  if (match) return match[1];
+  const scoreMatch = title.match(/\d+\.?\d*/);
+  return scoreMatch ? scoreMatch[0] : "?";
 }
 
 function extractSectorName(title: string): string {
@@ -49,17 +49,30 @@ function extractSectorName(title: string): string {
   return match ? match[1] : title;
 }
 
-function parseDrivers(description: string): Array<{ dim: string; total: string; details: string }> {
-  const parts = description.split("Top drivers:")[1];
-  if (!parts) return [];
-  return parts.split("|").map(part => {
+function parseComponentScores(description: string): Array<{ label: string; value: string }> {
+  const match = description.match(/Predictive model scores\s*—\s*(.+?)\.\s*Top/);
+  if (!match) return [];
+  return match[1].split("|").map(part => {
     const trimmed = part.trim();
-    const dimMatch = trimmed.match(/^(\S+(?:\s\S+)?)\s*\(([^)]+)\)/);
-    if (!dimMatch) return { dim: trimmed, total: "", details: trimmed };
+    const colonIdx = trimmed.lastIndexOf(":");
+    if (colonIdx === -1) return { label: trimmed, value: "" };
     return {
-      dim: dimMatch[1],
-      total: dimMatch[2],
-      details: trimmed.substring(dimMatch[0].length).replace(/^:\s*/, ""),
+      label: trimmed.substring(0, colonIdx).trim(),
+      value: trimmed.substring(colonIdx + 1).trim(),
+    };
+  }).filter(d => d.label);
+}
+
+function parseTopDimensions(description: string): Array<{ dim: string; score: string }> {
+  const match = description.match(/Top dimensions:\s*(.+)$/);
+  if (!match) return [];
+  return match[1].split(",").map(part => {
+    const trimmed = part.trim();
+    const colonIdx = trimmed.lastIndexOf(":");
+    if (colonIdx === -1) return { dim: trimmed, score: "" };
+    return {
+      dim: trimmed.substring(0, colonIdx).trim(),
+      score: trimmed.substring(colonIdx + 1).trim(),
     };
   }).filter(d => d.dim);
 }
@@ -112,7 +125,7 @@ export default function AlertsPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight" data-testid="text-alerts-page-title">Risk Alerts</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Active risk notifications by severity
+              Active risk notifications from the 5-Component Predictive Scoring Model
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -208,8 +221,9 @@ export default function AlertsPage() {
             sortedAlerts.map((alert) => {
               const config = severityConfig[alert.severity] || severityConfig.medium;
               const isExpanded = expandedAlerts.has(alert.id);
-              const scoreChange = extractScoreChange(alert.title);
-              const drivers = parseDrivers(alert.description || "");
+              const avgScore = extractAvgScore(alert.title);
+              const componentScores = parseComponentScores(alert.description || "");
+              const topDims = parseTopDimensions(alert.description || "");
 
               return (
                 <Card
@@ -242,10 +256,10 @@ export default function AlertsPage() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <div className="text-right">
-                            <div className={`text-lg font-bold ${config.textColor}`} data-testid={`text-change-${alert.id}`}>
-                              {scoreChange}
+                            <div className={`text-lg font-bold ${config.textColor}`} data-testid={`text-score-${alert.id}`}>
+                              {avgScore}
                             </div>
-                            <div className="text-[10px] text-muted-foreground">avg pts</div>
+                            <div className="text-[10px] text-muted-foreground">avg score</div>
                           </div>
                           {isExpanded ? (
                             <ChevronUp className="w-4 h-4 text-muted-foreground" />
@@ -255,18 +269,39 @@ export default function AlertsPage() {
                         </div>
                       </button>
 
-                      {isExpanded && drivers.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-border/50 space-y-2" data-testid={`drivers-${alert.id}`}>
-                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-1">
-                            <TrendingUp className="w-3 h-3" /> Score Drivers
-                          </p>
-                          {drivers.map((driver, i) => (
-                            <div key={i} className="flex items-center gap-2 text-xs">
-                              <span className="font-medium w-24 shrink-0">{driver.dim}</span>
-                              <span className={`font-bold ${config.textColor} w-16 shrink-0`}>{driver.total}</span>
-                              <span className="text-muted-foreground truncate">{driver.details}</span>
+                      {isExpanded && (
+                        <div className="mt-3 pt-3 border-t border-border/50 space-y-3" data-testid={`drivers-${alert.id}`}>
+                          {componentScores.length > 0 && (
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium flex items-center gap-1 mb-2">
+                                <TrendingUp className="w-3 h-3" /> Component Scores
+                              </p>
+                              <div className="flex gap-2 flex-wrap">
+                                {componentScores.map((comp, i) => (
+                                  <div key={i} className="flex items-center gap-1.5 text-xs bg-muted/50 rounded px-2 py-1">
+                                    <span className="font-medium">{comp.label}</span>
+                                    <span className={`font-bold ${parseInt(comp.value) >= 75 ? "text-red-500" : parseInt(comp.value) >= 50 ? "text-amber-500" : "text-green-500"}`}>
+                                      {comp.value}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          ))}
+                          )}
+                          {topDims.length > 0 && (
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium mb-1">
+                                Top Risk Dimensions
+                              </p>
+                              <div className="flex gap-2 flex-wrap">
+                                {topDims.map((d, i) => (
+                                  <Badge key={i} variant="outline" className="text-xs">
+                                    {d.dim}: <span className="font-bold ml-1">{d.score}</span>
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

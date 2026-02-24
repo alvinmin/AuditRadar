@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertTriangle, TrendingUp, TrendingDown, Minus, FileText, Shield, Newspaper, ChevronRight, Bug } from "lucide-react";
+import { AlertTriangle, TrendingUp, TrendingDown, Minus, FileText, Shield, Newspaper, ChevronRight, Bug, CheckCircle, ClipboardList } from "lucide-react";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -23,6 +23,25 @@ import {
   LabelList,
 } from "recharts";
 import type { RiskSector } from "@shared/schema";
+
+interface ControlHealthDriver {
+  controlId: string;
+  control: string;
+  controlType: string;
+  designEffectiveness: string;
+  operatingEffectiveness: string;
+  score: number;
+}
+
+interface AuditIssueDriver {
+  issueTitle: string;
+  description: string;
+  severity: string;
+  status: string;
+  source: string;
+  auditEngagement: string;
+  weightedScore: number;
+}
 
 interface IncidentDriver {
   id: string;
@@ -59,18 +78,22 @@ interface DimensionDriver {
   dimension: string;
   baseScore: number;
   adjustedScore: number;
-  incidentAdjustment: number;
-  regulatoryAdjustment: number;
-  newsAdjustment: number;
-  cyberAdjustment: number;
+  baselineContribution: number;
+  controlHealthContribution: number;
+  auditIssueTrendContribution: number;
+  businessExternalContribution: number;
+  operationalRiskContribution: number;
+  controlHealthDrivers: ControlHealthDriver[];
+  auditIssueDrivers: AuditIssueDriver[];
   incidentDrivers: IncidentDriver[];
   regulatoryDrivers: RegDriver[];
   newsDrivers: NewsDriver[];
   cyberDrivers: CyberDriver[];
-  incidentAction: string;
-  regulatoryAction: string;
-  newsAction: string;
-  cyberAction: string;
+  baselineAction: string;
+  controlHealthAction: string;
+  auditIssueAction: string;
+  businessExternalAction: string;
+  operationalRiskAction: string;
 }
 
 interface DriversResponse {
@@ -78,6 +101,13 @@ interface DriversResponse {
   sectorCategory: string;
   averageAdjustedScore: number;
   severity: string;
+  componentScores: {
+    baseline: number;
+    controlHealth: number;
+    auditIssueTrend: number;
+    businessExternal: number;
+    operationalRisk: number;
+  };
   dimensions: DimensionDriver[];
 }
 
@@ -98,11 +128,11 @@ function getScoreColor(score: number) {
 }
 
 const WATERFALL_COLORS: Record<string, string> = {
-  "Base Score": "#6366f1",
-  "Incidents": "#f97316",
-  "Regulatory": "#a855f7",
-  "News": "#3b82f6",
-  "Cyber/Vendor": "#ef4444",
+  "Baseline (30%)": "#6366f1",
+  "Control Health (25%)": "#8b5cf6",
+  "Audit Issues (20%)": "#f59e0b",
+  "Business/External (15%)": "#3b82f6",
+  "Operational Risk (10%)": "#ef4444",
   "Final Score": "#10b981",
 };
 
@@ -115,11 +145,11 @@ function CustomRadarTooltip({ active, payload }: any) {
       <p className="font-semibold text-sm">{data.dimension}</p>
       <div className="flex items-center gap-2">
         <div className="w-2.5 h-2.5 rounded-full bg-blue-400" />
-        <span>Base: {data.base}</span>
+        <span>Baseline: {data.base}</span>
       </div>
       <div className="flex items-center gap-2">
         <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-        <span>Adjusted: {data.adjusted}</span>
+        <span>Composite: {data.adjusted}</span>
       </div>
       <div className="text-muted-foreground">
         Change: {data.adjusted - data.base > 0 ? "+" : ""}{data.adjusted - data.base}
@@ -135,8 +165,7 @@ function CustomWaterfallTooltip({ active, payload }: any) {
   return (
     <div className="bg-popover border rounded-md p-3 shadow-lg text-xs space-y-1">
       <p className="font-semibold text-sm">{data.name}</p>
-      <p>{data.name === "Base Score" || data.name === "Final Score" ? `Score: ${data.displayValue}` : `Adjustment: ${data.displayValue > 0 ? "+" : ""}${data.displayValue}`}</p>
-      {data.name === "Final Score" && <p className="text-muted-foreground">Clamped to 0–100</p>}
+      <p>{data.name === "Final Score" ? `Score: ${data.displayValue}` : `Contribution: ${data.displayValue.toFixed(1)}`}</p>
     </div>
   );
 }
@@ -147,7 +176,7 @@ function RiskRadarChart({ dimensions, selectedDimension, onSelectDimension }: {
   onSelectDimension: (dim: string) => void;
 }) {
   const radarData = dimensions.map(d => ({
-    dimension: d.dimension.replace("Data/Tech", "Data/Tech"),
+    dimension: d.dimension,
     fullDimension: d.dimension,
     base: d.baseScore,
     adjusted: d.adjustedScore,
@@ -183,7 +212,7 @@ function RiskRadarChart({ dimensions, selectedDimension, onSelectDimension }: {
             />
             <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10 }} />
             <Radar
-              name="Base Score"
+              name="Baseline Score"
               dataKey="base"
               stroke="#60a5fa"
               fill="#60a5fa"
@@ -192,7 +221,7 @@ function RiskRadarChart({ dimensions, selectedDimension, onSelectDimension }: {
               strokeDasharray="6 3"
             />
             <Radar
-              name="Adjusted Score"
+              name="Composite Score"
               dataKey="adjusted"
               stroke="#ef4444"
               fill="#ef4444"
@@ -206,11 +235,11 @@ function RiskRadarChart({ dimensions, selectedDimension, onSelectDimension }: {
       <div className="flex items-center justify-center gap-6 mt-2">
         <div className="flex items-center gap-2 text-xs">
           <div className="w-4 h-0.5 bg-blue-400 border-dashed border-t-2 border-blue-400" />
-          <span className="text-muted-foreground">Base Score</span>
+          <span className="text-muted-foreground">Baseline Score</span>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <div className="w-4 h-0.5 bg-red-400" />
-          <span className="text-muted-foreground">Adjusted Score</span>
+          <span className="text-muted-foreground">Composite Score</span>
         </div>
       </div>
     </Card>
@@ -219,61 +248,29 @@ function RiskRadarChart({ dimensions, selectedDimension, onSelectDimension }: {
 
 function WaterfallChart({ dim }: { dim: DimensionDriver }) {
   const waterfallData = useMemo(() => {
-    const base = dim.baseScore;
-    const inc = Math.round(dim.incidentAdjustment * 10) / 10;
-    const reg = Math.round(dim.regulatoryAdjustment * 10) / 10;
-    const news = Math.round(dim.newsAdjustment * 10) / 10;
-    const cyber = Math.round((dim.cyberAdjustment || 0) * 10) / 10;
+    const bl = dim.baselineContribution;
+    const ch = dim.controlHealthContribution;
+    const ai = dim.auditIssueTrendContribution;
+    const be = dim.businessExternalContribution;
+    const or = dim.operationalRiskContribution;
     const final = dim.adjustedScore;
 
-    let running = base;
+    let running = 0;
+    const data = [];
 
-    const data = [
-      { name: "Base Score", invisible: 0, value: base, displayValue: base, isTotal: true },
-    ];
+    data.push({ name: "Baseline (30%)", invisible: 0, value: bl, displayValue: bl, isTotal: false });
+    running += bl;
 
-    if (inc !== 0) {
-      data.push({
-        name: "Incidents",
-        invisible: inc > 0 ? running : running + inc,
-        value: Math.abs(inc),
-        displayValue: inc,
-        isTotal: false,
-      });
-      running += inc;
-    }
+    data.push({ name: "Control Health (25%)", invisible: running, value: ch, displayValue: ch, isTotal: false });
+    running += ch;
 
-    if (reg !== 0) {
-      data.push({
-        name: "Regulatory",
-        invisible: reg > 0 ? running : running + reg,
-        value: Math.abs(reg),
-        displayValue: reg,
-        isTotal: false,
-      });
-      running += reg;
-    }
+    data.push({ name: "Audit Issues (20%)", invisible: running, value: ai, displayValue: ai, isTotal: false });
+    running += ai;
 
-    if (news !== 0) {
-      data.push({
-        name: "News",
-        invisible: news > 0 ? running : running + news,
-        value: Math.abs(news),
-        displayValue: news,
-        isTotal: false,
-      });
-      running += news;
-    }
+    data.push({ name: "Business/External (15%)", invisible: running, value: be, displayValue: be, isTotal: false });
+    running += be;
 
-    if (cyber !== 0) {
-      data.push({
-        name: "Cyber/Vendor",
-        invisible: cyber > 0 ? running : running + cyber,
-        value: Math.abs(cyber),
-        displayValue: cyber,
-        isTotal: false,
-      });
-    }
+    data.push({ name: "Operational Risk (10%)", invisible: running, value: or, displayValue: or, isTotal: false });
 
     data.push({ name: "Final Score", invisible: 0, value: final, displayValue: final, isTotal: true });
 
@@ -290,16 +287,20 @@ function WaterfallChart({ dim }: { dim: DimensionDriver }) {
           {dim.adjustedScore}/100
         </Badge>
       </div>
-      <p className="text-xs text-muted-foreground mb-3">How each factor builds the final score</p>
+      <p className="text-xs text-muted-foreground mb-3">How each component builds the final score</p>
       <div className="w-full h-[220px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={waterfallData} barCategoryGap="20%">
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis
               dataKey="name"
-              tick={{ fontSize: 11 }}
+              tick={{ fontSize: 9 }}
               tickLine={false}
               axisLine={false}
+              interval={0}
+              angle={-15}
+              textAnchor="end"
+              height={50}
             />
             <YAxis
               domain={[0, maxVal]}
@@ -309,7 +310,6 @@ function WaterfallChart({ dim }: { dim: DimensionDriver }) {
               width={35}
             />
             <RechartsTooltip content={<CustomWaterfallTooltip />} />
-            <ReferenceLine y={dim.baseScore} stroke="#60a5fa" strokeDasharray="4 4" strokeWidth={1} />
             <Bar dataKey="invisible" stackId="waterfall" fill="transparent" />
             <Bar dataKey="value" stackId="waterfall" radius={[4, 4, 0, 0]}>
               {waterfallData.map((entry, index) => (
@@ -321,18 +321,14 @@ function WaterfallChart({ dim }: { dim: DimensionDriver }) {
               <LabelList
                 dataKey="displayValue"
                 position="top"
-                formatter={(val: number) => {
-                  const entry = waterfallData.find(d => d.displayValue === val);
-                  if (entry?.isTotal) return val;
-                  return val > 0 ? `+${val}` : val;
-                }}
+                formatter={(val: number) => typeof val === 'number' ? val.toFixed(1) : val}
                 className="fill-foreground text-[10px]"
               />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <div className="flex items-center justify-center gap-4 mt-2 flex-wrap">
+      <div className="flex items-center justify-center gap-3 mt-2 flex-wrap">
         {Object.entries(WATERFALL_COLORS).map(([key, color]) => (
           <div key={key} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
             <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
@@ -345,7 +341,7 @@ function WaterfallChart({ dim }: { dim: DimensionDriver }) {
 }
 
 function DriverDetails({ dim }: { dim: DimensionDriver }) {
-  const hasDrivers = dim.incidentDrivers.length > 0 || dim.regulatoryDrivers.length > 0 || dim.newsDrivers.length > 0 || (dim.cyberDrivers && dim.cyberDrivers.length > 0);
+  const hasDrivers = (dim.controlHealthDrivers?.length > 0) || (dim.auditIssueDrivers?.length > 0) || (dim.incidentDrivers?.length > 0) || (dim.regulatoryDrivers?.length > 0) || (dim.newsDrivers?.length > 0) || (dim.cyberDrivers?.length > 0);
 
   if (!hasDrivers) {
     return (
@@ -355,14 +351,96 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
 
   return (
     <Accordion type="multiple" className="w-full">
-      {dim.incidentDrivers.length > 0 && (
+      {dim.controlHealthDrivers && dim.controlHealthDrivers.length > 0 && (
+        <AccordionItem value="controlHealth" className="border-b-0">
+          <AccordionTrigger className="py-2 text-xs hover:no-underline" data-testid={`trigger-control-${dim.dimension.replace(/[\s/]/g, "-")}`}>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="w-3.5 h-3.5 text-purple-500" />
+              <span>{dim.controlHealthDrivers.length} Control{dim.controlHealthDrivers.length > 1 ? "s" : ""} with Gaps</span>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-purple-500 ml-1">
+                {dim.controlHealthContribution.toFixed(1)} pts
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-2 pl-5">
+              {dim.controlHealthDrivers.map((ctrl) => (
+                <div key={ctrl.controlId} className="text-xs border rounded-md p-2 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium font-mono">{ctrl.controlId}</span>
+                    <div className="flex gap-1">
+                      <Badge variant="outline" className={`text-[10px] px-1 py-0 ${ctrl.designEffectiveness === "Effective" ? "text-green-500" : "text-red-500"}`}>
+                        Design: {ctrl.designEffectiveness}
+                      </Badge>
+                      <Badge variant="outline" className={`text-[10px] px-1 py-0 ${ctrl.operatingEffectiveness === "Effective" ? "text-green-500" : "text-red-500"}`}>
+                        Operating: {ctrl.operatingEffectiveness}
+                      </Badge>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2">{ctrl.control}</p>
+                  <p className="text-muted-foreground/70 mt-0.5">{ctrl.controlType} | Score: {ctrl.score}/100</p>
+                </div>
+              ))}
+              {dim.controlHealthAction && (
+                <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-purple-500/5 border border-purple-500/10">
+                  <ChevronRight className="w-3.5 h-3.5 text-purple-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-purple-700 dark:text-purple-400">{dim.controlHealthAction}</p>
+                </div>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
+      {dim.auditIssueDrivers && dim.auditIssueDrivers.length > 0 && (
+        <AccordionItem value="auditIssues" className="border-b-0">
+          <AccordionTrigger className="py-2 text-xs hover:no-underline" data-testid={`trigger-issues-${dim.dimension.replace(/[\s/]/g, "-")}`}>
+            <div className="flex items-center gap-1.5">
+              <ClipboardList className="w-3.5 h-3.5 text-amber-500" />
+              <span>{dim.auditIssueDrivers.length} Audit Issue{dim.auditIssueDrivers.length > 1 ? "s" : ""}</span>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-500 ml-1">
+                {dim.auditIssueTrendContribution.toFixed(1)} pts
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-2 pl-5">
+              {dim.auditIssueDrivers.map((issue, i) => (
+                <div key={i} className="text-xs border rounded-md p-2 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium truncate max-w-[250px]">{issue.issueTitle}</span>
+                    <div className="flex gap-1">
+                      <Badge variant="outline" className={`text-[10px] px-1 py-0 ${issue.severity === "Severe" || issue.severity === "High" ? "text-red-500" : "text-yellow-500"}`}>
+                        {issue.severity}
+                      </Badge>
+                      <Badge variant="outline" className={`text-[10px] px-1 py-0 ${issue.status === "Open" ? "text-red-500" : issue.status === "In Progress" ? "text-amber-500" : "text-green-500"}`}>
+                        {issue.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2">{issue.description}</p>
+                  <p className="text-muted-foreground/70 mt-0.5">{issue.source} | {issue.auditEngagement}</p>
+                </div>
+              ))}
+              {dim.auditIssueAction && (
+                <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-amber-500/5 border border-amber-500/10">
+                  <ChevronRight className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-amber-700 dark:text-amber-400">{dim.auditIssueAction}</p>
+                </div>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
+      {dim.incidentDrivers && dim.incidentDrivers.length > 0 && (
         <AccordionItem value="incidents" className="border-b-0">
           <AccordionTrigger className="py-2 text-xs hover:no-underline" data-testid={`trigger-incidents-${dim.dimension.replace(/[\s/]/g, "-")}`}>
             <div className="flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-orange-500" />
-              <span>{dim.incidentDrivers.length} Incident{dim.incidentDrivers.length > 1 ? "s" : ""} Contributing</span>
+              <span>{dim.incidentDrivers.length} Incident{dim.incidentDrivers.length > 1 ? "s" : ""}</span>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-orange-500 ml-1">
-                +{dim.incidentAdjustment}
+                part of Operational Risk
               </Badge>
             </div>
           </AccordionTrigger>
@@ -380,25 +458,19 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
                   <p className="text-muted-foreground mt-0.5">{inc.process} (impact: {inc.impact}/16)</p>
                 </div>
               ))}
-              {dim.incidentAction && (
-                <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-blue-500/5 border border-blue-500/10">
-                  <ChevronRight className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" />
-                  <p className="text-xs text-blue-700 dark:text-blue-400">{dim.incidentAction}</p>
-                </div>
-              )}
             </div>
           </AccordionContent>
         </AccordionItem>
       )}
 
-      {dim.regulatoryDrivers.length > 0 && (
+      {dim.regulatoryDrivers && dim.regulatoryDrivers.length > 0 && (
         <AccordionItem value="regulatory" className="border-b-0">
           <AccordionTrigger className="py-2 text-xs hover:no-underline" data-testid={`trigger-regulatory-${dim.dimension.replace(/[\s/]/g, "-")}`}>
             <div className="flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-purple-500" />
-              <span>{dim.regulatoryDrivers.length} Regulation{dim.regulatoryDrivers.length > 1 ? "s" : ""} Contributing</span>
-              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ml-1 ${dim.regulatoryAdjustment > 0 ? "text-red-500" : "text-green-500"}`}>
-                {dim.regulatoryAdjustment > 0 ? "+" : ""}{dim.regulatoryAdjustment}
+              <Shield className="w-3.5 h-3.5 text-blue-500" />
+              <span>{dim.regulatoryDrivers.length} Regulation{dim.regulatoryDrivers.length > 1 ? "s" : ""}</span>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-blue-500 ml-1">
+                part of Business/External
               </Badge>
             </div>
           </AccordionTrigger>
@@ -409,16 +481,16 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{reg.regulator}</span>
                     <Badge variant="outline" className={`text-[10px] px-1 py-0 ${reg.direction === "Raised" ? "text-red-500" : "text-green-500"}`}>
-                      {reg.direction} ({reg.impact > 0 ? "+" : ""}{reg.impact})
+                      {reg.direction}
                     </Badge>
                   </div>
                   <p className="text-muted-foreground mt-0.5 line-clamp-2">{reg.rule}</p>
                 </div>
               ))}
-              {dim.regulatoryAction && (
-                <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-purple-500/5 border border-purple-500/10">
-                  <ChevronRight className="w-3.5 h-3.5 text-purple-500 mt-0.5 shrink-0" />
-                  <p className="text-xs text-purple-700 dark:text-purple-400">{dim.regulatoryAction}</p>
+              {dim.businessExternalAction && (
+                <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-blue-500/5 border border-blue-500/10">
+                  <ChevronRight className="w-3.5 h-3.5 text-blue-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-blue-700 dark:text-blue-400">{dim.businessExternalAction}</p>
                 </div>
               )}
             </div>
@@ -426,14 +498,14 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
         </AccordionItem>
       )}
 
-      {dim.newsDrivers.length > 0 && (
+      {dim.newsDrivers && dim.newsDrivers.length > 0 && (
         <AccordionItem value="news" className="border-b-0">
           <AccordionTrigger className="py-2 text-xs hover:no-underline" data-testid={`trigger-news-${dim.dimension.replace(/[\s/]/g, "-")}`}>
             <div className="flex items-center gap-1.5">
-              <Newspaper className="w-3.5 h-3.5 text-blue-500" />
-              <span>{dim.newsDrivers.length} News Article{dim.newsDrivers.length > 1 ? "s" : ""} Contributing</span>
-              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ml-1 ${dim.newsAdjustment > 0 ? "text-red-500" : "text-green-500"}`}>
-                {dim.newsAdjustment > 0 ? "+" : ""}{dim.newsAdjustment}
+              <Newspaper className="w-3.5 h-3.5 text-sky-500" />
+              <span>{dim.newsDrivers.length} News Article{dim.newsDrivers.length > 1 ? "s" : ""}</span>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-sky-500 ml-1">
+                part of Business/External
               </Badge>
             </div>
           </AccordionTrigger>
@@ -448,15 +520,8 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
                     </Badge>
                   </div>
                   <p className="text-muted-foreground mt-0.5 line-clamp-2">{article.headline}</p>
-                  <p className="text-muted-foreground/70 mt-0.5">{article.riskType}</p>
                 </div>
               ))}
-              {dim.newsAction && (
-                <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-sky-500/5 border border-sky-500/10">
-                  <ChevronRight className="w-3.5 h-3.5 text-sky-500 mt-0.5 shrink-0" />
-                  <p className="text-xs text-sky-700 dark:text-sky-400">{dim.newsAction}</p>
-                </div>
-              )}
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -467,9 +532,9 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
           <AccordionTrigger className="py-2 text-xs hover:no-underline" data-testid={`trigger-cyber-${dim.dimension.replace(/[\s/]/g, "-")}`}>
             <div className="flex items-center gap-1.5">
               <Bug className="w-3.5 h-3.5 text-red-500" />
-              <span>{dim.cyberDrivers.length} Vendor Vulnerabilit{dim.cyberDrivers.length > 1 ? "ies" : "y"} Contributing</span>
+              <span>{dim.cyberDrivers.length} CVE Vulnerabilit{dim.cyberDrivers.length > 1 ? "ies" : "y"}</span>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-red-500 ml-1">
-                +{dim.cyberAdjustment}
+                part of Operational Risk
               </Badge>
             </div>
           </AccordionTrigger>
@@ -490,10 +555,10 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
                   <p className="text-muted-foreground/70 mt-0.5">{cve.product}</p>
                 </div>
               ))}
-              {dim.cyberAction && (
+              {dim.operationalRiskAction && (
                 <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-red-500/5 border border-red-500/10">
                   <ChevronRight className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
-                  <p className="text-xs text-red-700 dark:text-red-400">{dim.cyberAction}</p>
+                  <p className="text-xs text-red-700 dark:text-red-400">{dim.operationalRiskAction}</p>
                 </div>
               )}
             </div>
@@ -503,6 +568,14 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
     </Accordion>
   );
 }
+
+const COMPONENT_META = [
+  { key: "baseline", label: "Baseline Risk", weight: "30%", color: "bg-indigo-500", textColor: "text-indigo-600" },
+  { key: "controlHealth", label: "Control Health", weight: "25%", color: "bg-purple-500", textColor: "text-purple-600" },
+  { key: "auditIssueTrend", label: "Audit Issues", weight: "20%", color: "bg-amber-500", textColor: "text-amber-600" },
+  { key: "businessExternal", label: "Business/External", weight: "15%", color: "bg-blue-500", textColor: "text-blue-600" },
+  { key: "operationalRisk", label: "Operational Risk", weight: "10%", color: "bg-red-500", textColor: "text-red-600" },
+];
 
 export default function DriversPage() {
   const [selectedSectorId, setSelectedSectorId] = useState<string>("");
@@ -533,7 +606,7 @@ export default function DriversPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Score Explainability</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Understand what drives each auditable unit's risk score, what it means, and what to do
+            5-Component Predictive Scoring Model — understand what drives each unit's risk score
           </p>
         </div>
 
@@ -583,7 +656,7 @@ export default function DriversPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Average Adjusted Score</p>
+                    <p className="text-xs text-muted-foreground">Average Composite Score</p>
                     <p className={`text-2xl font-bold ${getScoreColor(drivers.averageAdjustedScore)}`} data-testid="text-avg-score">
                       {drivers.averageAdjustedScore}
                     </p>
@@ -594,6 +667,20 @@ export default function DriversPage() {
                 </div>
               </div>
             </Card>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3" data-testid="component-scores">
+              {COMPONENT_META.map(comp => {
+                const score = drivers.componentScores[comp.key as keyof typeof drivers.componentScores];
+                return (
+                  <Card key={comp.key} className="p-3 text-center">
+                    <div className={`w-2 h-2 rounded-full ${comp.color} mx-auto mb-1`} />
+                    <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">{comp.label}</p>
+                    <p className={`text-xl font-bold ${getScoreColor(score)}`}>{score}</p>
+                    <p className="text-[10px] text-muted-foreground">Weight: {comp.weight}</p>
+                  </Card>
+                );
+              })}
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <RiskRadarChart
@@ -619,29 +706,18 @@ export default function DriversPage() {
 
             {selectedDim && (
               <Card className="p-4" data-testid="card-driver-details">
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
                   <h3 className="text-sm font-semibold">{selectedDim.dimension} — Contributing Factors</h3>
-                  <div className="flex gap-1.5">
-                    {selectedDim.incidentAdjustment !== 0 && (
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${selectedDim.incidentAdjustment > 0 ? "text-orange-500" : "text-green-500"}`}>
-                        Incidents: {selectedDim.incidentAdjustment > 0 ? "+" : ""}{selectedDim.incidentAdjustment}
-                      </Badge>
-                    )}
-                    {selectedDim.regulatoryAdjustment !== 0 && (
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${selectedDim.regulatoryAdjustment > 0 ? "text-red-500" : "text-green-500"}`}>
-                        Regulatory: {selectedDim.regulatoryAdjustment > 0 ? "+" : ""}{selectedDim.regulatoryAdjustment}
-                      </Badge>
-                    )}
-                    {selectedDim.newsAdjustment !== 0 && (
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${selectedDim.newsAdjustment > 0 ? "text-red-500" : "text-green-500"}`}>
-                        News: {selectedDim.newsAdjustment > 0 ? "+" : ""}{selectedDim.newsAdjustment}
-                      </Badge>
-                    )}
-                    {selectedDim.cyberAdjustment !== 0 && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-red-500">
-                        Cyber: +{selectedDim.cyberAdjustment}
-                      </Badge>
-                    )}
+                  <div className="flex gap-1.5 flex-wrap">
+                    {COMPONENT_META.map(comp => {
+                      const val = selectedDim[`${comp.key === "baseline" ? "baseline" : comp.key}Contribution` as keyof typeof selectedDim] as number;
+                      if (!val || val === 0) return null;
+                      return (
+                        <Badge key={comp.key} variant="outline" className={`text-[10px] px-1.5 py-0 ${comp.textColor}`}>
+                          {comp.label}: {val.toFixed(1)}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 </div>
                 <DriverDetails dim={selectedDim} />
@@ -652,54 +728,38 @@ export default function DriversPage() {
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 All Dimensions Overview
               </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {drivers.dimensions
-                    .sort((a, b) => b.adjustedScore - a.adjustedScore)
-                    .map(dim => (
-                      <Card
-                        key={dim.dimension}
-                        className={`p-3 cursor-pointer transition-colors hover:border-primary/40 ${selectedDimension === dim.dimension ? "border-primary ring-1 ring-primary/30" : ""}`}
-                        onClick={() => setSelectedDimension(selectedDimension === dim.dimension ? null : dim.dimension)}
-                        data-testid={`card-dim-${dim.dimension.replace(/[\s/]/g, "-")}`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-sm font-medium">{dim.dimension}</h4>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">Base: {dim.baseScore}</span>
-                            <span className={`text-sm font-bold ${getScoreColor(dim.adjustedScore)}`}>{dim.adjustedScore}</span>
-                          </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {drivers.dimensions
+                  .sort((a, b) => b.adjustedScore - a.adjustedScore)
+                  .map(dim => (
+                    <Card
+                      key={dim.dimension}
+                      className={`p-3 cursor-pointer transition-colors hover:border-primary/40 ${selectedDimension === dim.dimension ? "border-primary ring-1 ring-primary/30" : ""}`}
+                      onClick={() => setSelectedDimension(selectedDimension === dim.dimension ? null : dim.dimension)}
+                      data-testid={`card-dim-${dim.dimension.replace(/[\s/]/g, "-")}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium">{dim.dimension}</h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Base: {dim.baseScore}</span>
+                          <span className={`text-sm font-bold ${getScoreColor(dim.adjustedScore)}`}>{dim.adjustedScore}</span>
                         </div>
-                        <div className="flex gap-1.5 mt-2">
-                          {dim.incidentAdjustment !== 0 && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${dim.incidentAdjustment > 0 ? "bg-orange-500/10 text-orange-600" : "bg-green-500/10 text-green-600"}`}>
-                              Inc: {dim.incidentAdjustment > 0 ? "+" : ""}{dim.incidentAdjustment}
+                      </div>
+                      <div className="flex gap-1.5 mt-2 flex-wrap">
+                        {COMPONENT_META.map(comp => {
+                          const val = dim[`${comp.key === "baseline" ? "baseline" : comp.key}Contribution` as keyof typeof dim] as number;
+                          if (!val || val === 0) return null;
+                          return (
+                            <span key={comp.key} className={`text-[10px] px-1.5 py-0.5 rounded ${comp.color}/10 ${comp.textColor}`}>
+                              {comp.label.split(" ")[0]}: {val.toFixed(1)}
                             </span>
-                          )}
-                          {dim.regulatoryAdjustment !== 0 && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${dim.regulatoryAdjustment > 0 ? "bg-purple-500/10 text-purple-600" : "bg-green-500/10 text-green-600"}`}>
-                              Reg: {dim.regulatoryAdjustment > 0 ? "+" : ""}{dim.regulatoryAdjustment}
-                            </span>
-                          )}
-                          {dim.newsAdjustment !== 0 && (
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded ${dim.newsAdjustment > 0 ? "bg-blue-500/10 text-blue-600" : "bg-green-500/10 text-green-600"}`}>
-                              News: {dim.newsAdjustment > 0 ? "+" : ""}{dim.newsAdjustment}
-                            </span>
-                          )}
-                          {dim.cyberAdjustment !== 0 && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-600">
-                              Cyber: +{dim.cyberAdjustment}
-                            </span>
-                          )}
-                          {dim.incidentAdjustment === 0 && dim.regulatoryAdjustment === 0 && dim.newsAdjustment === 0 && (dim.cyberAdjustment || 0) === 0 && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">No adjustments</span>
-                          )}
-                        </div>
-                      </Card>
-                    ))}
-                </div>
+                          );
+                        })}
+                      </div>
+                    </Card>
+                  ))}
               </div>
+            </div>
           </>
         )}
       </div>

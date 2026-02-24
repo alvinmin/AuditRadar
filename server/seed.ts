@@ -286,11 +286,11 @@ function computeBusinessExternalScores(
       }
     }
 
-    for (const unit of matchedUnits) {
-      if (!unitNames.includes(unit)) continue;
+    matchedUnits.forEach(unit => {
+      if (!unitNames.includes(unit)) return;
       if (!unitScores[unit]) unitScores[unit] = [];
       unitScores[unit].push(regScore);
-    }
+    });
   }
 
   const result: Record<string, number> = {};
@@ -351,22 +351,23 @@ function computeOperationalRiskScores(
 
     for (const vendor of vendors) {
       const vendorLower = vendor.toLowerCase();
-      let bestMatch: { total: number; ransomware: number } | null = null;
-      for (const [cveVendor, stats] of vendorToCves.entries()) {
+      let matchedTotal = 0;
+      let matchedRansomware = 0;
+      let found = false;
+      vendorToCves.forEach((stats, cveVendor) => {
+        if (found) return;
         if (cveVendor.includes(vendorLower) || vendorLower.includes(cveVendor)) {
-          bestMatch = stats;
-          break;
+          matchedTotal = stats.total; matchedRansomware = stats.ransomware; found = true; return;
         }
         const vendorWords = vendorLower.split(/\s+/);
         const cveWords = cveVendor.split(/\s+/);
         if (vendorWords.length > 0 && cveWords.some((w: string) => vendorWords.includes(w) && w.length > 3)) {
-          bestMatch = stats;
-          break;
+          matchedTotal = stats.total; matchedRansomware = stats.ransomware; found = true; return;
         }
-      }
-      if (bestMatch) {
+      });
+      if (found) {
         matchedVendors++;
-        totalWeightedScore += bestMatch.total + bestMatch.ransomware * 2;
+        totalWeightedScore += matchedTotal + matchedRansomware * 2;
       }
     }
 
