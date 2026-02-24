@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { RiskHeatmap } from "@/components/risk-heatmap";
 import { RiskSummaryCards } from "@/components/risk-summary-cards";
-import { RiskTrendChart } from "@/components/risk-trend-chart";
+
 import { SectorDetailPanel } from "@/components/sector-detail-panel";
 import { NewsFeed } from "@/components/news-feed";
 import auditRadarLogo from "@assets/Audit_Radar_Logo_1771881298407.png";
@@ -75,8 +75,6 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-
-        <RiskTrendChart metrics={metrics} sectors={sectors} isLoading={isLoading} />
 
         <NewsFeed news={news} isLoading={newsLoading} maxItems={10} />
       </div>
