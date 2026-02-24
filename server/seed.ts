@@ -65,7 +65,9 @@ function clamp(val: number, min: number, max: number): number {
 }
 
 function scaleScore(raw: number): number {
-  return clamp((raw / 5) * 100, 0, 100);
+  const scaled = clamp((raw / 5) * 100, 0, 100);
+  if (scaled >= 100) return Math.floor(Math.random() * 16 + 75);
+  return scaled;
 }
 
 function getSeverityFromScore(score: number): string {
@@ -471,7 +473,7 @@ export async function seedDatabase() {
       const cyber = cyberAdj[unitName]?.[dim] || 0;
       const totalChange = inc + reg + news + cyber;
 
-      const adjustedScore = clamp(Math.round(baseScaled + totalChange), 0, 100);
+      const adjustedScore = clamp(Math.round(baseScaled + totalChange), 0, 98);
       dimScores[dim] = adjustedScore;
       totalAdjustedScore += adjustedScore;
       dimChanges.push({ dim, incAdj: inc, regAdj_val: reg, newsAdj_val: news, cyberAdj_val: cyber, totalChange });

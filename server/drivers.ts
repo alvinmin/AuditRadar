@@ -148,7 +148,9 @@ function clamp(val: number, min: number, max: number): number {
 }
 
 function scaleScore(raw: number): number {
-  return clamp((raw / 5) * 100, 0, 100);
+  const scaled = clamp((raw / 5) * 100, 0, 100);
+  if (scaled >= 100) return Math.floor(Math.random() * 16 + 75);
+  return scaled;
 }
 
 const ACTION_MAP: Record<string, Record<string, string>> = {
@@ -400,7 +402,7 @@ export async function computeDriversForSector(sectorName: string): Promise<Drive
       cyberAdj = clamp(Math.round(normalized * (dimWeights[dim] || 0) * 10) / 10, 0, 12);
     }
 
-    const adjustedScore = clamp(Math.round(baseScaled + incidentAdj + regAdj + newsAdj + cyberAdj), 0, 100);
+    const adjustedScore = clamp(Math.round(baseScaled + incidentAdj + regAdj + newsAdj + cyberAdj), 0, 98);
     totalAdj += adjustedScore;
 
     const uniqueCves = new Map<string, CveRow>();
