@@ -21,13 +21,13 @@ interface RiskHeatmapProps {
 const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Fraud", "Data/Tech", "Reputation"];
 
 const GRADIENT_STOPS = [
-  { stop: 0,   h: 160, s: 90, l: 45 },
-  { stop: 30,  h: 140, s: 80, l: 42 },
-  { stop: 50,  h: 55,  s: 85, l: 48 },
-  { stop: 65,  h: 38,  s: 90, l: 50 },
-  { stop: 80,  h: 15,  s: 92, l: 48 },
-  { stop: 90,  h: 0,   s: 85, l: 45 },
-  { stop: 100, h: 340, s: 95, l: 40 },
+  { stop: 0,   h: 190, s: 85, l: 45 },
+  { stop: 30,  h: 215, s: 90, l: 50 },
+  { stop: 50,  h: 248, s: 85, l: 55 },
+  { stop: 65,  h: 272, s: 88, l: 52 },
+  { stop: 80,  h: 295, s: 90, l: 50 },
+  { stop: 90,  h: 320, s: 92, l: 52 },
+  { stop: 100, h: 340, s: 95, l: 55 },
 ];
 
 function lerpGradient(value: number): { h: number; s: number; l: number } {
@@ -47,24 +47,26 @@ function lerpGradient(value: number): { h: number; s: number; l: number } {
 
 function getGradientColor(value: number): string {
   const { h, s, l } = lerpGradient(value);
-  const alpha = 0.40 + (value / 100) * 0.50;
+  const alpha = 0.50 + (value / 100) * 0.45;
   return `hsla(${h.toFixed(0)}, ${s.toFixed(0)}%, ${l.toFixed(0)}%, ${alpha.toFixed(2)})`;
 }
 
 function getGradientGlow(value: number): string {
   const { h, s, l } = lerpGradient(value);
   const intensity = (value / 100);
-  const r1 = 4 + intensity * 12;
-  const r2 = 8 + intensity * 20;
-  const a1 = (0.15 + intensity * 0.45).toFixed(2);
-  const a2 = (0.05 + intensity * 0.25).toFixed(2);
+  const r1 = 6 + intensity * 16;
+  const r2 = 12 + intensity * 28;
+  const r3 = 2 + intensity * 6;
+  const a1 = (0.20 + intensity * 0.50).toFixed(2);
+  const a2 = (0.08 + intensity * 0.30).toFixed(2);
+  const a3 = (0.10 + intensity * 0.25).toFixed(2);
   const color = `${h.toFixed(0)}, ${s.toFixed(0)}%, ${l.toFixed(0)}%`;
-  return `0 0 ${r1.toFixed(0)}px hsla(${color}, ${a1}), 0 0 ${r2.toFixed(0)}px hsla(${color}, ${a2})`;
+  return `0 0 ${r1.toFixed(0)}px hsla(${color}, ${a1}), 0 0 ${r2.toFixed(0)}px hsla(${color}, ${a2}), inset 0 0 ${r3.toFixed(0)}px hsla(${color}, ${a3})`;
 }
 
 function getGradientBorder(value: number): string {
   const { h, s, l } = lerpGradient(value);
-  const alpha = (0.20 + (value / 100) * 0.45).toFixed(2);
+  const alpha = (0.25 + (value / 100) * 0.50).toFixed(2);
   return `1px solid hsla(${h.toFixed(0)}, ${s.toFixed(0)}%, ${l.toFixed(0)}%, ${alpha})`;
 }
 
