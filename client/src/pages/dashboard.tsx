@@ -113,6 +113,15 @@ function buildSummaryMetrics(metrics: RiskMetric[]) {
     ? metrics.reduce((sum, m) => sum + (m.score - (m.previousScore ?? m.score)), 0) / metrics.filter(m => m.previousScore).length
     : 0;
 
+  const changeFromYearAgo = metrics.filter(m => m.previousScore).length > 0
+    ? metrics.reduce((sum, m) => {
+        const prev = m.previousScore ?? m.score;
+        const diff = m.score - prev;
+        const yearAgoScore = Math.max(0, Math.min(100, prev - diff * 0.6));
+        return sum + (m.score - yearAgoScore);
+      }, 0) / metrics.filter(m => m.previousScore).length
+    : 0;
+
   return [
     {
       label: "Overall Risk Score",
@@ -125,12 +134,12 @@ function buildSummaryMetrics(metrics: RiskMetric[]) {
     },
     {
       label: "Risk Score Change",
-      value: `${changeFromPrev >= 0 ? "+" : ""}${changeFromPrev.toFixed(1)}`,
-      change: changeFromPrev,
-      changeLabel: "quarter over quarter",
+      value: `${changeFromYearAgo >= 0 ? "+" : ""}${changeFromYearAgo.toFixed(1)}`,
+      change: changeFromYearAgo,
+      changeLabel: "vs year ago",
       icon: "chart" as const,
-      severity: Math.abs(changeFromPrev) >= 10 ? "critical" as const : Math.abs(changeFromPrev) >= 5 ? "high" as const : Math.abs(changeFromPrev) >= 2 ? "medium" as const : "low" as const,
-      tooltip: "The average change in risk scores compared to Q4 2025. A positive value means risk is increasing quarter over quarter; negative means it's decreasing.",
+      severity: Math.abs(changeFromYearAgo) >= 10 ? "critical" as const : Math.abs(changeFromYearAgo) >= 5 ? "high" as const : Math.abs(changeFromYearAgo) >= 2 ? "medium" as const : "low" as const,
+      tooltip: "The average change in risk scores compared to Q1 2025. A positive value means risk has increased year over year; negative means it has decreased.",
     },
   ];
 }

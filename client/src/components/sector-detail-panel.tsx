@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { X, TrendingUp, TrendingDown, Minus, Target, Zap } from "lucide-react";
+import { X, Target } from "lucide-react";
 import type { RiskMetric, RiskSector, HeatmapData } from "@shared/schema";
 
 interface SectorDetailPanelProps {
@@ -41,12 +41,6 @@ export function SectorDetailPanel({ sector, metrics, heatmapData, onClose }: Sec
     ? sectorMetrics.reduce((sum, m) => sum + m.score, 0) / sectorMetrics.length
     : 0;
 
-  const avgPredicted = sectorMetrics.length > 0
-    ? sectorMetrics.reduce((sum, m) => sum + (m.predictedScore ?? m.score), 0) / sectorMetrics.length
-    : 0;
-
-  const trendDirection = avgPredicted > overallScore ? "up" : avgPredicted < overallScore ? "down" : "stable";
-
   return (
     <Card className="p-4 sm:p-6">
       <div className="flex items-start justify-between gap-2 mb-5">
@@ -62,8 +56,8 @@ export function SectorDetailPanel({ sector, metrics, heatmapData, onClose }: Sec
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        <div className="p-3 rounded-md bg-muted/30">
+      <div className="mb-5">
+        <div className="p-3 rounded-md bg-muted/30 inline-block">
           <div className="flex items-center gap-1.5 mb-1">
             <Target className="w-3.5 h-3.5 text-muted-foreground" />
             <span className="text-xs text-muted-foreground">Current Score</span>
@@ -71,20 +65,6 @@ export function SectorDetailPanel({ sector, metrics, heatmapData, onClose }: Sec
           <span className={`text-2xl font-bold ${getScoreColor(overallScore)}`}>
             {overallScore.toFixed(1)}
           </span>
-        </div>
-        <div className="p-3 rounded-md bg-muted/30">
-          <div className="flex items-center gap-1.5 mb-1">
-            <Zap className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Predicted</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className={`text-2xl font-bold ${getScoreColor(avgPredicted)}`}>
-              {avgPredicted.toFixed(1)}
-            </span>
-            {trendDirection === "up" && <TrendingUp className="w-4 h-4 text-red-500" />}
-            {trendDirection === "down" && <TrendingDown className="w-4 h-4 text-emerald-500" />}
-            {trendDirection === "stable" && <Minus className="w-4 h-4 text-muted-foreground" />}
-          </div>
         </div>
       </div>
 
@@ -115,18 +95,6 @@ export function SectorDetailPanel({ sector, metrics, heatmapData, onClose }: Sec
                 </div>
               </div>
               <Progress value={metric.score} className={`h-2 ${getProgressColor(metric.score)}`} />
-              {metric.predictedScore && (
-                <div className="flex items-center justify-between mt-1">
-                  <span className="text-[11px] text-muted-foreground">
-                    Predicted: {metric.predictedScore.toFixed(1)}
-                  </span>
-                  {metric.confidence && (
-                    <span className="text-[11px] text-muted-foreground">
-                      Confidence: {(metric.confidence * 100).toFixed(0)}%
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
           );
         })}
