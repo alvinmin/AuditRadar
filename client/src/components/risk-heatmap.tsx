@@ -21,34 +21,36 @@ interface RiskHeatmapProps {
 const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Fraud", "Data/Tech", "Reputation"];
 
 function getHue(value: number): number {
-  // Green (120) → Yellow-green (80) → Yellow (55) → Amber (30) → Orange (15) → Red (0)
-  return Math.max(0, 120 - (value / 100) * 120);
+  if (value < 50) return 120;
+  // 50 → yellow (58), 65 → orange (25), 80 → red-orange (10), 100 → deep red (0)
+  const t = (value - 50) / 50;
+  return Math.max(0, 58 - t * 58);
 }
 
 function getCellColor(value: number): string {
   const hue = getHue(value);
-  // Saturation: green ~55%, yellow peak ~72%, red ~68%
-  const sat = value <= 50
-    ? 55 + (value / 50) * 17
-    : 72 - ((value - 50) / 50) * 4;
-  // Lightness: green ~42%, yellow slightly brighter ~46%, red darker ~38%
-  const lit = value <= 45
-    ? 42 + (value / 45) * 4
-    : 46 - ((value - 45) / 55) * 8;
-  const alpha = 0.82 + (value / 100) * 0.13;
+  if (value < 50) {
+    return `hsla(120, 52%, 40%, 0.85)`;
+  }
+  const t = (value - 50) / 50;
+  // Saturation rises from 68% (yellow) to 80% (red)
+  const sat = 68 + t * 12;
+  // Lightness: yellow is brighter (47%), red is darker (36%)
+  const lit = 47 - t * 11;
+  const alpha = 0.86 + t * 0.10;
   return `hsla(${hue.toFixed(1)}, ${sat.toFixed(0)}%, ${lit.toFixed(0)}%, ${alpha.toFixed(2)})`;
 }
 
 function getCellGlow(value: number): string {
   const hue = getHue(value);
-  const intensity = 0.15 + (value / 100) * 0.38;
-  const spread = 4 + (value / 100) * 10;
+  const intensity = value < 50 ? 0.18 : 0.22 + ((value - 50) / 50) * 0.35;
+  const spread = value < 50 ? 4 : 5 + ((value - 50) / 50) * 10;
   return `0 0 ${spread.toFixed(0)}px hsla(${hue.toFixed(1)}, 80%, 55%, ${intensity.toFixed(2)})`;
 }
 
 function getCellBorder(value: number): string {
   const hue = getHue(value);
-  const alpha = 0.30 + (value / 100) * 0.45;
+  const alpha = value < 50 ? 0.35 : 0.40 + ((value - 50) / 50) * 0.40;
   return `1px solid hsla(${hue.toFixed(1)}, 70%, 58%, ${alpha.toFixed(2)})`;
 }
 
@@ -86,7 +88,7 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
         <div className="flex items-center gap-2">
           <div
             className="h-3 w-36 rounded-sm"
-            style={{ background: "linear-gradient(to right, hsla(120,58%,42%,0.88), hsla(80,68%,44%,0.90), hsla(55,72%,46%,0.91), hsla(30,72%,42%,0.93), hsla(10,72%,40%,0.95), hsla(0,68%,38%,0.96))" }}
+            style={{ background: "linear-gradient(to right, hsla(120,52%,40%,0.85) 0%, hsla(120,52%,40%,0.85) 50%, hsla(58,68%,47%,0.88) 55%, hsla(35,74%,43%,0.92) 70%, hsla(12,78%,40%,0.95) 85%, hsla(0,80%,36%,0.96) 100%)" }}
           />
           <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider">
             <span className="sf-label">Low</span>
