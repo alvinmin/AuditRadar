@@ -5,6 +5,22 @@ import path from "path";
 import { loadNewsFromSheet2 } from "./news-loader";
 import type { NewsRow } from "./news-loader";
 
+interface VendorRow {
+  "Auditable Unit": string;
+  "Vendors": string;
+}
+
+interface CveRow {
+  cveID: string;
+  vendorProject: string;
+  product: string;
+  vulnerabilityName: string;
+  shortDescription: string;
+  requiredAction: string;
+  knownRansomwareCampaignUse: string;
+  cwes: string;
+}
+
 interface IncidentRow {
   "Incident ID": string;
   "Incident Title": string;
@@ -279,6 +295,72 @@ function computeNewsAdjustments(news: NewsRow[]): Record<string, Record<string, 
   return result;
 }
 
+function computeCyberAdjustments(
+  vendorRows: VendorRow[],
+  cveRows: CveRow[],
+): Record<string, Record<string, number>> {
+  const vendorToCves = new Map<string, { total: number; ransomware: number; cves: CveRow[] }>();
+  for (const cve of cveRows) {
+    const vendorLower = cve.vendorProject.toLowerCase().trim();
+    if (!vendorToCves.has(vendorLower)) {
+      vendorToCves.set(vendorLower, { total: 0, ransomware: 0, cves: [] });
+    }
+    const entry = vendorToCves.get(vendorLower)!;
+    entry.total++;
+    if (cve.knownRansomwareCampaignUse === "Known") entry.ransomware++;
+    entry.cves.push(cve);
+  }
+
+  const unitAdj: Record<string, Record<string, number>> = {};
+
+  for (const vr of vendorRows) {
+    const unitName = vr["Auditable Unit"].trim();
+    const vendors = vr.Vendors.split(",").map(v => v.trim());
+
+    let totalWeightedScore = 0;
+    let matchedVendors = 0;
+
+    for (const vendor of vendors) {
+      const vendorLower = vendor.toLowerCase();
+      let bestMatch: { total: number; ransomware: number } | null = null;
+
+      const entries = Array.from(vendorToCves.entries());
+      for (const [cveVendor, stats] of entries) {
+        if (cveVendor.includes(vendorLower) || vendorLower.includes(cveVendor)) {
+          bestMatch = stats;
+          break;
+        }
+        const vendorWords = vendorLower.split(/\s+/);
+        const cveWords = cveVendor.split(/\s+/);
+        if (vendorWords.length > 0 && cveWords.some((w: string) => vendorWords.includes(w) && w.length > 3)) {
+          bestMatch = stats;
+          break;
+        }
+      }
+
+      if (bestMatch) {
+        matchedVendors++;
+        const cveScore = bestMatch.total + bestMatch.ransomware * 2;
+        totalWeightedScore += cveScore;
+      }
+    }
+
+    if (matchedVendors === 0) continue;
+
+    const avgScore = totalWeightedScore / vendors.length;
+    const normalized = clamp(avgScore / 40, 0, 1);
+
+    unitAdj[unitName] = {
+      "Data/Tech": clamp(Math.round(normalized * 12 * 10) / 10, 0, 12),
+      "Operational": clamp(Math.round(normalized * 8 * 10) / 10, 0, 8),
+      "Fraud": clamp(Math.round(normalized * 5 * 10) / 10, 0, 5),
+      "Reputation": clamp(Math.round(normalized * 4 * 10) / 10, 0, 4),
+    };
+  }
+
+  return unitAdj;
+}
+
 function mergeAdjustments(
   baseScore: number,
   category: string,
@@ -339,14 +421,26 @@ export async function seedDatabase() {
   const newsRows: NewsRow[] = await loadNewsFromSheet2();
   console.log(`Parsed ${newsRows.length} news articles from Sheet2 of Updated Market News`);
 
-  console.log("Computing score adjustments from 3 data sources...");
+  const vendorPath = path.resolve("attached_assets/Auditable_Units_Tech_Vendors_v2_1771945289230.xlsx");
+  const vendorWb = XLSX.readFile(vendorPath);
+  const vendorRows: VendorRow[] = XLSX.utils.sheet_to_json(vendorWb.Sheets["Auditable Units Vendors"]);
+  console.log(`Parsed ${vendorRows.length} vendor mappings from Auditable Units Tech Vendors`);
+
+  const cvePath = path.resolve("attached_assets/known_exploited_vulnerabilities_1771945289231.xlsx");
+  const cveWb = XLSX.readFile(cvePath);
+  const cveRows: CveRow[] = XLSX.utils.sheet_to_json(cveWb.Sheets["known_exploited_vulnerabilities"]);
+  console.log(`Parsed ${cveRows.length} known exploited vulnerabilities from CVE data`);
+
+  console.log("Computing score adjustments from 5 data sources...");
   const incidentAdj = computeIncidentAdjustments(incidentRows);
   const regAdj = computeRegAdjustments(regRows);
   const newsAdj = computeNewsAdjustments(newsRows);
+  const cyberAdj = computeCyberAdjustments(vendorRows, cveRows);
 
   console.log("Incident adjustment categories:", Object.keys(incidentAdj));
   console.log("Regulatory adjustment categories:", Object.keys(regAdj));
   console.log("News adjustment categories:", Object.keys(newsAdj));
+  console.log("Cyber adjustment units:", Object.keys(cyberAdj).length);
 
   for (const row of dataRows) {
     const unitName = String(row[2]);
@@ -364,7 +458,7 @@ export async function seedDatabase() {
     let maxAdjustedScore = 0;
     let maxDim = "";
     const dimScores: Record<string, number> = {};
-    const dimChanges: Array<{ dim: string; incAdj: number; regAdj_val: number; newsAdj_val: number; totalChange: number }> = [];
+    const dimChanges: Array<{ dim: string; incAdj: number; regAdj_val: number; newsAdj_val: number; cyberAdj_val: number; totalChange: number }> = [];
 
     for (const dim of RISK_DIMENSIONS) {
       const colIdx = RISK_DIM_INDICES[dim];
@@ -374,25 +468,26 @@ export async function seedDatabase() {
       const inc = incidentAdj[category]?.[dim] || 0;
       const reg = regAdj[category]?.[dim] || 0;
       const news = newsAdj[category]?.[dim] || 0;
-      const totalChange = inc + reg + news;
+      const cyber = cyberAdj[unitName]?.[dim] || 0;
+      const totalChange = inc + reg + news + cyber;
 
       const adjustedScore = clamp(Math.round(baseScaled + totalChange), 0, 100);
       dimScores[dim] = adjustedScore;
       totalAdjustedScore += adjustedScore;
-      dimChanges.push({ dim, incAdj: inc, regAdj_val: reg, newsAdj_val: news, totalChange });
+      dimChanges.push({ dim, incAdj: inc, regAdj_val: reg, newsAdj_val: news, cyberAdj_val: cyber, totalChange });
 
       const prevScaled = baseScaled;
       const trend = totalChange > 0.5 ? "up" : totalChange < -0.5 ? "down" : "stable";
 
       const DECAY = 0.3;
-      const momentum = (news * 1.5 + reg * 1.2 + inc * 0.8) * DECAY;
+      const momentum = (news * 1.5 + reg * 1.2 + inc * 0.8 + cyber * 1.3) * DECAY;
       const predictedScore = clamp(Math.round(adjustedScore + momentum), 0, 100);
 
-      const sources = [inc, reg, news].filter(v => Math.abs(v) > 0);
+      const sources = [inc, reg, news, cyber].filter(v => Math.abs(v) > 0);
       const allPositive = sources.length > 0 && sources.every(v => v > 0);
       const allNegative = sources.length > 0 && sources.every(v => v < 0);
       const signalConsistency = allPositive || allNegative;
-      const signalStrength = sources.length / 3;
+      const signalStrength = sources.length / 4;
       const confidence = signalConsistency
         ? clamp(0.75 + signalStrength * 0.15, 0.7, 0.95)
         : clamp(0.55 + signalStrength * 0.10, 0.45, 0.70);
@@ -434,6 +529,7 @@ export async function seedDatabase() {
           if (Math.abs(d.incAdj) > 0) parts.push(`Incidents ${d.incAdj > 0 ? "+" : ""}${d.incAdj.toFixed(1)}`);
           if (Math.abs(d.regAdj_val) > 0) parts.push(`Regulatory ${d.regAdj_val > 0 ? "+" : ""}${d.regAdj_val.toFixed(1)}`);
           if (Math.abs(d.newsAdj_val) > 0) parts.push(`News ${d.newsAdj_val > 0 ? "+" : ""}${d.newsAdj_val.toFixed(1)}`);
+          if (Math.abs(d.cyberAdj_val) > 0) parts.push(`Cyber/Vendor ${d.cyberAdj_val > 0 ? "+" : ""}${d.cyberAdj_val.toFixed(1)}`);
           return `${d.dim} (${d.totalChange > 0 ? "+" : ""}${d.totalChange.toFixed(1)}): ${parts.join(", ")}`;
         })
         .join(" | ");

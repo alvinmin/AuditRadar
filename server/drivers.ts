@@ -2,6 +2,22 @@ import path from "path";
 import { loadNewsFromSheet2 } from "./news-loader";
 import type { NewsRow } from "./news-loader";
 
+interface VendorRow {
+  "Auditable Unit": string;
+  "Vendors": string;
+}
+
+interface CveRow {
+  cveID: string;
+  vendorProject: string;
+  product: string;
+  vulnerabilityName: string;
+  shortDescription: string;
+  requiredAction: string;
+  knownRansomwareCampaignUse: string;
+  cwes: string;
+}
+
 interface IncidentRow {
   "Incident ID": string;
   "Incident Title": string;
@@ -163,6 +179,15 @@ const ACTION_MAP: Record<string, Record<string, string>> = {
     "Data/Tech": "Evaluate technology risk posture against cyber threats highlighted in news coverage.",
     "Reputation": "Monitor media sentiment and prepare crisis communication plans if trends worsen.",
   },
+  "cyber": {
+    "Financial": "Assess financial exposure from vendor vulnerabilities and ensure cyber insurance coverage is adequate.",
+    "Regulatory": "Verify vendor compliance with cybersecurity regulatory requirements (DORA, SEC cyber rules).",
+    "Operational": "Review vendor SLAs and business continuity plans for critical technology dependencies.",
+    "Change": "Prioritize patching and vendor upgrades for systems with known exploited vulnerabilities.",
+    "Fraud": "Evaluate whether vendor vulnerabilities could enable unauthorized access or fraud schemes.",
+    "Data/Tech": "Conduct vulnerability assessments on affected vendor products and accelerate patching cycles.",
+    "Reputation": "Prepare disclosure plans for vendor-related cyber incidents that could affect stakeholders.",
+  },
 };
 
 export interface DimensionDriver {
@@ -172,6 +197,7 @@ export interface DimensionDriver {
   incidentAdjustment: number;
   regulatoryAdjustment: number;
   newsAdjustment: number;
+  cyberAdjustment: number;
   incidentDrivers: Array<{
     id: string;
     title: string;
@@ -192,9 +218,17 @@ export interface DimensionDriver {
     riskType: string;
     source: string;
   }>;
+  cyberDrivers: Array<{
+    cveId: string;
+    vendor: string;
+    product: string;
+    name: string;
+    ransomware: boolean;
+  }>;
   incidentAction: string;
   regulatoryAction: string;
   newsAction: string;
+  cyberAction: string;
 }
 
 export interface DriversResponse {
@@ -210,6 +244,8 @@ let cachedData: {
   incidents: IncidentRow[];
   regs: RegRow[];
   news: NewsRow[];
+  vendors: VendorRow[];
+  cves: CveRow[];
 } | null = null;
 
 async function loadData() {
@@ -233,12 +269,20 @@ async function loadData() {
 
   const news: NewsRow[] = await loadNewsFromSheet2();
 
-  cachedData = { auditRows, incidents, regs, news };
+  const vendorPath = path.resolve("attached_assets/Auditable_Units_Tech_Vendors_v2_1771945289230.xlsx");
+  const vendorWb = XLSX.readFile(vendorPath);
+  const vendors: VendorRow[] = XLSX.utils.sheet_to_json(vendorWb.Sheets["Auditable Units Vendors"]);
+
+  const cvePath = path.resolve("attached_assets/known_exploited_vulnerabilities_1771945289231.xlsx");
+  const cveWb = XLSX.readFile(cvePath);
+  const cves: CveRow[] = XLSX.utils.sheet_to_json(cveWb.Sheets["known_exploited_vulnerabilities"]);
+
+  cachedData = { auditRows, incidents, regs, news, vendors, cves };
   return cachedData;
 }
 
 export async function computeDriversForSector(sectorName: string): Promise<DriversResponse | null> {
-  const { auditRows, incidents, regs, news } = await loadData();
+  const { auditRows, incidents, regs, news, vendors, cves } = await loadData();
 
   const dataRows = auditRows.slice(3).filter((r: any[]) => r[2]);
   const row = dataRows.find((r: any[]) => String(r[2]) === sectorName);
@@ -323,8 +367,46 @@ export async function computeDriversForSector(sectorName: string): Promise<Drive
       newsAdj = clamp((totalSentiment / matchingNews.length) * 3, -8, 8);
     }
 
-    const adjustedScore = clamp(Math.round(baseScaled + incidentAdj + regAdj + newsAdj), 0, 100);
+    const vendorRow = vendors.find(v => v["Auditable Unit"].trim() === sectorName);
+    const unitVendors = vendorRow ? vendorRow.Vendors.split(",").map(v => v.trim()) : [];
+    const matchingCves: CveRow[] = [];
+    const CYBER_DIMS = ["Data/Tech", "Operational", "Fraud", "Reputation"];
+
+    if (CYBER_DIMS.includes(dim) && unitVendors.length > 0) {
+      for (const vendor of unitVendors) {
+        const vendorLower = vendor.toLowerCase();
+        for (const cve of cves) {
+          const cveVendor = cve.vendorProject.toLowerCase().trim();
+          if (cveVendor.includes(vendorLower) || vendorLower.includes(cveVendor)) {
+            matchingCves.push(cve);
+            continue;
+          }
+          const vendorWords = vendorLower.split(/\s+/);
+          const cveWords = cveVendor.split(/\s+/);
+          if (vendorWords.length > 0 && cveWords.some(w => vendorWords.includes(w) && w.length > 3)) {
+            matchingCves.push(cve);
+          }
+        }
+      }
+    }
+
+    let cyberAdj = 0;
+    if (matchingCves.length > 0 && unitVendors.length > 0) {
+      const ransomwareCount = matchingCves.filter(c => c.knownRansomwareCampaignUse === "Known").length;
+      const totalWeighted = matchingCves.length + ransomwareCount * 2;
+      const avgPerVendor = totalWeighted / unitVendors.length;
+      const normalized = clamp(avgPerVendor / 40, 0, 1);
+      const dimWeights: Record<string, number> = { "Data/Tech": 12, "Operational": 8, "Fraud": 5, "Reputation": 4 };
+      cyberAdj = clamp(Math.round(normalized * (dimWeights[dim] || 0) * 10) / 10, 0, 12);
+    }
+
+    const adjustedScore = clamp(Math.round(baseScaled + incidentAdj + regAdj + newsAdj + cyberAdj), 0, 100);
     totalAdj += adjustedScore;
+
+    const uniqueCves = new Map<string, CveRow>();
+    for (const cve of matchingCves) {
+      if (!uniqueCves.has(cve.cveID)) uniqueCves.set(cve.cveID, cve);
+    }
 
     dimensions.push({
       dimension: dim,
@@ -333,6 +415,7 @@ export async function computeDriversForSector(sectorName: string): Promise<Drive
       incidentAdjustment: Math.round(incidentAdj * 10) / 10,
       regulatoryAdjustment: Math.round(regAdj * 10) / 10,
       newsAdjustment: Math.round(newsAdj * 10) / 10,
+      cyberAdjustment: Math.round(cyberAdj * 10) / 10,
       incidentDrivers: matchingIncidents.slice(0, 5).map(inc => ({
         id: inc["Incident ID"],
         title: inc["Incident Title"],
@@ -353,9 +436,17 @@ export async function computeDriversForSector(sectorName: string): Promise<Drive
         riskType: a.Risk_Type,
         source: a.Source,
       })),
+      cyberDrivers: Array.from(uniqueCves.values()).slice(0, 5).map(c => ({
+        cveId: c.cveID,
+        vendor: c.vendorProject,
+        product: c.product,
+        name: c.vulnerabilityName.substring(0, 100),
+        ransomware: c.knownRansomwareCampaignUse === "Known",
+      })),
       incidentAction: matchingIncidents.length > 0 ? (ACTION_MAP["incident"][dim] || "") : "",
       regulatoryAction: matchingRegs.length > 0 ? (ACTION_MAP["regulatory"][dim] || "") : "",
       newsAction: matchingNews.length > 0 ? (ACTION_MAP["news"][dim] || "") : "",
+      cyberAction: matchingCves.length > 0 ? (ACTION_MAP["cyber"][dim] || "") : "",
     });
   }
 

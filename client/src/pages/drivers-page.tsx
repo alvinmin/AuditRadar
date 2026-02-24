@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertTriangle, TrendingUp, TrendingDown, Minus, FileText, Shield, Newspaper, ChevronRight } from "lucide-react";
+import { AlertTriangle, TrendingUp, TrendingDown, Minus, FileText, Shield, Newspaper, ChevronRight, Bug } from "lucide-react";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -47,6 +47,14 @@ interface NewsDriver {
   source: string;
 }
 
+interface CyberDriver {
+  cveId: string;
+  vendor: string;
+  product: string;
+  name: string;
+  ransomware: boolean;
+}
+
 interface DimensionDriver {
   dimension: string;
   baseScore: number;
@@ -54,12 +62,15 @@ interface DimensionDriver {
   incidentAdjustment: number;
   regulatoryAdjustment: number;
   newsAdjustment: number;
+  cyberAdjustment: number;
   incidentDrivers: IncidentDriver[];
   regulatoryDrivers: RegDriver[];
   newsDrivers: NewsDriver[];
+  cyberDrivers: CyberDriver[];
   incidentAction: string;
   regulatoryAction: string;
   newsAction: string;
+  cyberAction: string;
 }
 
 interface DriversResponse {
@@ -91,6 +102,7 @@ const WATERFALL_COLORS: Record<string, string> = {
   "Incidents": "#f97316",
   "Regulatory": "#a855f7",
   "News": "#3b82f6",
+  "Cyber/Vendor": "#ef4444",
   "Final Score": "#10b981",
 };
 
@@ -211,6 +223,7 @@ function WaterfallChart({ dim }: { dim: DimensionDriver }) {
     const inc = Math.round(dim.incidentAdjustment * 10) / 10;
     const reg = Math.round(dim.regulatoryAdjustment * 10) / 10;
     const news = Math.round(dim.newsAdjustment * 10) / 10;
+    const cyber = Math.round((dim.cyberAdjustment || 0) * 10) / 10;
     const final = dim.adjustedScore;
 
     let running = base;
@@ -247,6 +260,17 @@ function WaterfallChart({ dim }: { dim: DimensionDriver }) {
         invisible: news > 0 ? running : running + news,
         value: Math.abs(news),
         displayValue: news,
+        isTotal: false,
+      });
+      running += news;
+    }
+
+    if (cyber !== 0) {
+      data.push({
+        name: "Cyber/Vendor",
+        invisible: cyber > 0 ? running : running + cyber,
+        value: Math.abs(cyber),
+        displayValue: cyber,
         isTotal: false,
       });
     }
@@ -321,7 +345,7 @@ function WaterfallChart({ dim }: { dim: DimensionDriver }) {
 }
 
 function DriverDetails({ dim }: { dim: DimensionDriver }) {
-  const hasDrivers = dim.incidentDrivers.length > 0 || dim.regulatoryDrivers.length > 0 || dim.newsDrivers.length > 0;
+  const hasDrivers = dim.incidentDrivers.length > 0 || dim.regulatoryDrivers.length > 0 || dim.newsDrivers.length > 0 || (dim.cyberDrivers && dim.cyberDrivers.length > 0);
 
   if (!hasDrivers) {
     return (
@@ -431,6 +455,45 @@ function DriverDetails({ dim }: { dim: DimensionDriver }) {
                 <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-sky-500/5 border border-sky-500/10">
                   <ChevronRight className="w-3.5 h-3.5 text-sky-500 mt-0.5 shrink-0" />
                   <p className="text-xs text-sky-700 dark:text-sky-400">{dim.newsAction}</p>
+                </div>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      )}
+
+      {dim.cyberDrivers && dim.cyberDrivers.length > 0 && (
+        <AccordionItem value="cyber" className="border-b-0">
+          <AccordionTrigger className="py-2 text-xs hover:no-underline" data-testid={`trigger-cyber-${dim.dimension.replace(/[\s/]/g, "-")}`}>
+            <div className="flex items-center gap-1.5">
+              <Bug className="w-3.5 h-3.5 text-red-500" />
+              <span>{dim.cyberDrivers.length} Vendor Vulnerabilit{dim.cyberDrivers.length > 1 ? "ies" : "y"} Contributing</span>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-red-500 ml-1">
+                +{dim.cyberAdjustment}
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <div className="space-y-2 pl-5">
+              {dim.cyberDrivers.map((cve, i) => (
+                <div key={i} className="text-xs border rounded-md p-2 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium font-mono">{cve.cveId}</span>
+                    <div className="flex gap-1">
+                      <Badge variant="outline" className="text-[10px] px-1 py-0">{cve.vendor}</Badge>
+                      {cve.ransomware && (
+                        <Badge variant="outline" className="text-[10px] px-1 py-0 text-red-500 border-red-500/30">Ransomware</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground mt-0.5 line-clamp-2">{cve.name}</p>
+                  <p className="text-muted-foreground/70 mt-0.5">{cve.product}</p>
+                </div>
+              ))}
+              {dim.cyberAction && (
+                <div className="flex items-start gap-1.5 mt-2 p-2 rounded-md bg-red-500/5 border border-red-500/10">
+                  <ChevronRight className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-red-700 dark:text-red-400">{dim.cyberAction}</p>
                 </div>
               )}
             </div>
@@ -574,6 +637,11 @@ export default function DriversPage() {
                         News: {selectedDim.newsAdjustment > 0 ? "+" : ""}{selectedDim.newsAdjustment}
                       </Badge>
                     )}
+                    {selectedDim.cyberAdjustment !== 0 && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-red-500">
+                        Cyber: +{selectedDim.cyberAdjustment}
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <DriverDetails dim={selectedDim} />
@@ -619,7 +687,12 @@ export default function DriversPage() {
                               News: {dim.newsAdjustment > 0 ? "+" : ""}{dim.newsAdjustment}
                             </span>
                           )}
-                          {dim.incidentAdjustment === 0 && dim.regulatoryAdjustment === 0 && dim.newsAdjustment === 0 && (
+                          {dim.cyberAdjustment !== 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-500/10 text-red-600">
+                              Cyber: +{dim.cyberAdjustment}
+                            </span>
+                          )}
+                          {dim.incidentAdjustment === 0 && dim.regulatoryAdjustment === 0 && dim.newsAdjustment === 0 && (dim.cyberAdjustment || 0) === 0 && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">No adjustments</span>
                           )}
                         </div>
