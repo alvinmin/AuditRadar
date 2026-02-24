@@ -2,14 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { RiskHeatmap } from "@/components/risk-heatmap";
 import { RiskSummaryCards } from "@/components/risk-summary-cards";
-
 import { SectorDetailPanel } from "@/components/sector-detail-panel";
 import { NewsFeed } from "@/components/news-feed";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Filter } from "lucide-react";
 import auditRadarLogo from "@assets/Audit_Radar_Logo_1771881298407.png";
 import type { RiskSector, RiskMetric, HeatmapData, MarketNews } from "@shared/schema";
 
 export default function Dashboard() {
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   const { data: sectors = [], isLoading: sectorsLoading } = useQuery<RiskSector[]>({
     queryKey: ["/api/sectors"],
@@ -29,13 +31,18 @@ export default function Dashboard() {
 
   const isLoading = sectorsLoading || metricsLoading || heatmapLoading;
 
-  const heatmapCells = heatmap.map((h) => ({
-    sector: sectors.find((s) => s.id === h.sectorId)?.name ?? "",
-    sectorId: h.sectorId,
-    dimension: h.riskDimension,
-    value: h.value,
-    trend: h.trend,
-  }));
+  const categories = Array.from(new Set(sectors.map(s => s.category)));
+  const filteredSectors = categoryFilter === "all" ? sectors : sectors.filter(s => s.category === categoryFilter);
+
+  const heatmapCells = heatmap
+    .filter(h => filteredSectors.some(s => s.id === h.sectorId))
+    .map((h) => ({
+      sector: sectors.find((s) => s.id === h.sectorId)?.name ?? "",
+      sectorId: h.sectorId,
+      dimension: h.riskDimension,
+      value: h.value,
+      trend: h.trend,
+    }));
 
   const summaryMetrics = buildSummaryMetrics(metrics);
   const selectedSectorObj = sectors.find((s) => s.id === selectedSector);
@@ -55,11 +62,26 @@ export default function Dashboard() {
 
         <RiskSummaryCards metrics={summaryMetrics} isLoading={isLoading} />
 
+        <div className="flex items-center justify-end gap-2 -mb-3">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[160px]" data-testid="select-dashboard-category-filter">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map(cat => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className={selectedSectorObj ? "lg:col-span-2" : "lg:col-span-3"}>
             <RiskHeatmap
               data={heatmapCells}
-              sectors={sectors}
+              sectors={filteredSectors}
               onCellClick={(sectorId) => setSelectedSector(sectorId === selectedSector ? null : sectorId)}
               selectedSector={selectedSector}
             />
