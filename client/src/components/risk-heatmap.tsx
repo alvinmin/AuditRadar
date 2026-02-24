@@ -20,39 +20,32 @@ interface RiskHeatmapProps {
 
 const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Fraud", "Data/Tech", "Reputation"];
 
-function getHue(value: number): number {
-  if (value < 50) return 120;
-  // 50 → yellow (58), 65 → orange (25), 80 → red-orange (10), 100 → deep red (0)
-  const t = (value - 50) / 50;
-  return Math.max(0, 58 - t * 58);
+function getBand(value: number): { bg: string; glow: string; border: string } {
+  if (value >= 90) return {
+    bg:     "hsla(4, 72%, 44%, 0.92)",
+    glow:   "0 0 10px hsla(4, 80%, 50%, 0.45)",
+    border: "1px solid hsla(4, 70%, 58%, 0.70)",
+  };
+  if (value >= 66) return {
+    bg:     "hsla(48, 80%, 44%, 0.90)",
+    glow:   "0 0 8px hsla(48, 85%, 52%, 0.35)",
+    border: "1px solid hsla(48, 75%, 58%, 0.60)",
+  };
+  if (value >= 51) return {
+    bg:     "hsla(122, 50%, 38%, 0.88)",
+    glow:   "0 0 7px hsla(122, 60%, 48%, 0.28)",
+    border: "1px solid hsla(122, 55%, 52%, 0.55)",
+  };
+  return {
+    bg:     "hsla(210, 55%, 48%, 0.82)",
+    glow:   "0 0 6px hsla(210, 65%, 58%, 0.22)",
+    border: "1px solid hsla(210, 60%, 62%, 0.48)",
+  };
 }
 
-function getCellColor(value: number): string {
-  const hue = getHue(value);
-  if (value < 50) {
-    return `hsla(120, 52%, 40%, 0.85)`;
-  }
-  const t = (value - 50) / 50;
-  // Saturation rises from 68% (yellow) to 80% (red)
-  const sat = 68 + t * 12;
-  // Lightness: yellow is brighter (47%), red is darker (36%)
-  const lit = 47 - t * 11;
-  const alpha = 0.86 + t * 0.10;
-  return `hsla(${hue.toFixed(1)}, ${sat.toFixed(0)}%, ${lit.toFixed(0)}%, ${alpha.toFixed(2)})`;
-}
-
-function getCellGlow(value: number): string {
-  const hue = getHue(value);
-  const intensity = value < 50 ? 0.18 : 0.22 + ((value - 50) / 50) * 0.35;
-  const spread = value < 50 ? 4 : 5 + ((value - 50) / 50) * 10;
-  return `0 0 ${spread.toFixed(0)}px hsla(${hue.toFixed(1)}, 80%, 55%, ${intensity.toFixed(2)})`;
-}
-
-function getCellBorder(value: number): string {
-  const hue = getHue(value);
-  const alpha = value < 50 ? 0.35 : 0.40 + ((value - 50) / 50) * 0.40;
-  return `1px solid hsla(${hue.toFixed(1)}, 70%, 58%, ${alpha.toFixed(2)})`;
-}
+function getCellColor(value: number): string  { return getBand(value).bg; }
+function getCellGlow(value: number): string   { return getBand(value).glow; }
+function getCellBorder(value: number): string { return getBand(value).border; }
 
 function getTrendIcon(trend: string) {
   if (trend === "up") return <TrendingUp className="w-3 h-3" />;
@@ -85,15 +78,22 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
           </h2>
           <p className="text-xs sf-subtitle mt-1 tracking-wide">Cross-sector risk assessment matrix // LIVE MONITORING</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="h-3 w-36 rounded-sm"
-            style={{ background: "linear-gradient(to right, hsla(120,52%,40%,0.85) 0%, hsla(120,52%,40%,0.85) 50%, hsla(58,68%,47%,0.88) 55%, hsla(35,74%,43%,0.92) 70%, hsla(12,78%,40%,0.95) 85%, hsla(0,80%,36%,0.96) 100%)" }}
-          />
-          <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider">
-            <span className="sf-label">Low</span>
-            <span className="sf-label">→</span>
-            <span className="sf-label">High</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
+            <div className="w-3 h-3 rounded-sm" style={{ background: "hsla(210,55%,48%,0.82)" }} />
+            <span className="sf-label">≤50</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
+            <div className="w-3 h-3 rounded-sm" style={{ background: "hsla(122,50%,38%,0.88)" }} />
+            <span className="sf-label">51–65</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
+            <div className="w-3 h-3 rounded-sm" style={{ background: "hsla(48,80%,44%,0.90)" }} />
+            <span className="sf-label">66–90</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
+            <div className="w-3 h-3 rounded-sm" style={{ background: "hsla(4,72%,44%,0.92)" }} />
+            <span className="sf-label">90+</span>
           </div>
         </div>
       </div>
