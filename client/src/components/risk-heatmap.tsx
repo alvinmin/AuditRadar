@@ -21,30 +21,29 @@ interface RiskHeatmapProps {
 const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Fraud", "Data/Tech", "Reputation"];
 
 function getHue(value: number): number {
-  if (value <= 60) return 120;
-  if (value <= 75) return 120 - ((value - 60) / 15) * 75;
-  return 45 - ((value - 75) / 25) * 45;
+  // Green (120) → Teal (160) → Cyan (185) → Blue (225) → Indigo (255) → Violet (280)
+  return 120 + (value / 100) * 160;
 }
 
 function getCellColor(value: number): string {
   const hue = getHue(value);
-  const sat = value <= 60 ? 52 : 52 + ((value - 60) / 40) * 28;
-  const lit = value <= 60 ? 36 : 36 - ((value - 60) / 40) * 8;
-  const alpha = 0.72 + (value / 100) * 0.22;
+  const sat = 62 + (value / 100) * 18;
+  const lit = 44 - (value / 100) * 10;
+  const alpha = 0.78 + (value / 100) * 0.17;
   return `hsla(${hue.toFixed(1)}, ${sat.toFixed(0)}%, ${lit.toFixed(0)}%, ${alpha.toFixed(2)})`;
 }
 
 function getCellGlow(value: number): string {
   const hue = getHue(value);
-  const intensity = 0.12 + (value / 100) * 0.40;
-  const spread = 4 + (value / 100) * 12;
-  return `0 0 ${spread.toFixed(0)}px hsla(${hue.toFixed(1)}, 75%, 50%, ${intensity.toFixed(2)})`;
+  const intensity = 0.18 + (value / 100) * 0.42;
+  const spread = 5 + (value / 100) * 12;
+  return `0 0 ${spread.toFixed(0)}px hsla(${hue.toFixed(1)}, 80%, 58%, ${intensity.toFixed(2)})`;
 }
 
 function getCellBorder(value: number): string {
   const hue = getHue(value);
-  const alpha = 0.20 + (value / 100) * 0.50;
-  return `1px solid hsla(${hue.toFixed(1)}, 65%, 55%, ${alpha.toFixed(2)})`;
+  const alpha = 0.28 + (value / 100) * 0.48;
+  return `1px solid hsla(${hue.toFixed(1)}, 70%, 62%, ${alpha.toFixed(2)})`;
 }
 
 function getTrendIcon(trend: string) {
@@ -80,14 +79,13 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
         </div>
         <div className="flex items-center gap-2">
           <div
-            className="h-3 w-32 rounded-sm"
-            style={{ background: "linear-gradient(to right, hsla(120,52%,36%,0.82), hsla(60,65%,34%,0.88), hsla(30,72%,32%,0.90), hsla(0,80%,28%,0.94))" }}
+            className="h-3 w-36 rounded-sm"
+            style={{ background: "linear-gradient(to right, hsla(120,65%,44%,0.85), hsla(160,70%,42%,0.88), hsla(185,75%,40%,0.90), hsla(225,78%,38%,0.92), hsla(255,78%,36%,0.94), hsla(280,80%,34%,0.96))" }}
           />
           <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider">
-            <span className="sf-label">0 — Low</span>
-            <span className="sf-label">60</span>
-            <span className="sf-label">75</span>
-            <span className="sf-label">100 — Critical</span>
+            <span className="sf-label">Low</span>
+            <span className="sf-label">→</span>
+            <span className="sf-label">High</span>
           </div>
         </div>
       </div>
