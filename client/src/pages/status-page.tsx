@@ -187,7 +187,7 @@ export default function StatusPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Momentum Weights</span>
-                <span className="font-medium text-xs">News ×1.5 | Reg ×1.2 | Inc ×0.8</span>
+                <span className="font-medium text-xs">News ×1.5 | Cyber ×1.3 | Reg ×1.2 | Inc ×0.8</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Dimensions</span>
@@ -212,6 +212,8 @@ export default function StatusPage() {
               { name: "IT Incident Data", file: "Incident_data.xlsx", desc: "100 IT incidents with severity/priority mappings" },
               { name: "Regulatory Inputs", file: "Reg_inputs.xlsx", desc: "6 SEC/EU regulatory changes with directional impact" },
               { name: "Market News Articles", file: "Predictive_Audit_Market_News.xlsx (Sheet2)", desc: "20 articles with algorithmically derived sentiment" },
+              { name: "Vendor Mappings", file: "Auditable_Units_Tech_Vendors_v2.xlsx", desc: "28 auditable units mapped to ~5 technology vendors each" },
+              { name: "Known Exploited Vulnerabilities", file: "known_exploited_vulnerabilities.xlsx", desc: "1,526 CVEs with ransomware flags matched to unit vendors" },
             ].map((src) => (
               <div key={src.name} className="flex items-center gap-3 p-2 rounded-md bg-muted/30 text-sm">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
