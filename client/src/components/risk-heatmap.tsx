@@ -21,29 +21,35 @@ interface RiskHeatmapProps {
 const RISK_DIMENSIONS = ["Financial", "Regulatory", "Operational", "Change", "Fraud", "Data/Tech", "Reputation"];
 
 function getHue(value: number): number {
-  // Green (120) → Teal (160) → Cyan (185) → Blue (225) → Indigo (255) → Violet (280)
-  return 120 + (value / 100) * 160;
+  // Green (120) → Yellow-green (80) → Yellow (55) → Amber (30) → Orange (15) → Red (0)
+  return Math.max(0, 120 - (value / 100) * 120);
 }
 
 function getCellColor(value: number): string {
   const hue = getHue(value);
-  const sat = 62 + (value / 100) * 18;
-  const lit = 44 - (value / 100) * 10;
-  const alpha = 0.78 + (value / 100) * 0.17;
+  // Saturation: green ~55%, yellow peak ~72%, red ~68%
+  const sat = value <= 50
+    ? 55 + (value / 50) * 17
+    : 72 - ((value - 50) / 50) * 4;
+  // Lightness: green ~42%, yellow slightly brighter ~46%, red darker ~38%
+  const lit = value <= 45
+    ? 42 + (value / 45) * 4
+    : 46 - ((value - 45) / 55) * 8;
+  const alpha = 0.82 + (value / 100) * 0.13;
   return `hsla(${hue.toFixed(1)}, ${sat.toFixed(0)}%, ${lit.toFixed(0)}%, ${alpha.toFixed(2)})`;
 }
 
 function getCellGlow(value: number): string {
   const hue = getHue(value);
-  const intensity = 0.18 + (value / 100) * 0.42;
-  const spread = 5 + (value / 100) * 12;
-  return `0 0 ${spread.toFixed(0)}px hsla(${hue.toFixed(1)}, 80%, 58%, ${intensity.toFixed(2)})`;
+  const intensity = 0.15 + (value / 100) * 0.38;
+  const spread = 4 + (value / 100) * 10;
+  return `0 0 ${spread.toFixed(0)}px hsla(${hue.toFixed(1)}, 80%, 55%, ${intensity.toFixed(2)})`;
 }
 
 function getCellBorder(value: number): string {
   const hue = getHue(value);
-  const alpha = 0.28 + (value / 100) * 0.48;
-  return `1px solid hsla(${hue.toFixed(1)}, 70%, 62%, ${alpha.toFixed(2)})`;
+  const alpha = 0.30 + (value / 100) * 0.45;
+  return `1px solid hsla(${hue.toFixed(1)}, 70%, 58%, ${alpha.toFixed(2)})`;
 }
 
 function getTrendIcon(trend: string) {
@@ -80,7 +86,7 @@ export function RiskHeatmap({ data, sectors, onCellClick, selectedSector }: Risk
         <div className="flex items-center gap-2">
           <div
             className="h-3 w-36 rounded-sm"
-            style={{ background: "linear-gradient(to right, hsla(120,65%,44%,0.85), hsla(160,70%,42%,0.88), hsla(185,75%,40%,0.90), hsla(225,78%,38%,0.92), hsla(255,78%,36%,0.94), hsla(280,80%,34%,0.96))" }}
+            style={{ background: "linear-gradient(to right, hsla(120,58%,42%,0.88), hsla(80,68%,44%,0.90), hsla(55,72%,46%,0.91), hsla(30,72%,42%,0.93), hsla(10,72%,40%,0.95), hsla(0,68%,38%,0.96))" }}
           />
           <div className="flex items-center gap-3 text-[10px] uppercase tracking-wider">
             <span className="sf-label">Low</span>
