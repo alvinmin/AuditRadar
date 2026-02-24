@@ -476,7 +476,7 @@ export async function seedDatabase() {
       totalAdjustedScore += adjustedScore;
       dimChanges.push({ dim, incAdj: inc, regAdj_val: reg, newsAdj_val: news, cyberAdj_val: cyber, totalChange });
 
-      const prevScaled = baseScaled;
+      const prevScaled = Math.floor(Math.random() * 16 + 75);
       const trend = totalChange > 0.5 ? "up" : totalChange < -0.5 ? "down" : "stable";
 
       const DECAY = 0.3;
