@@ -465,6 +465,7 @@ export async function seedDatabase() {
     const dimResults: Array<{
       dim: string;
       finalScore: number;
+      priorQuarterScore: number;
       baselineContrib: number;
       controlContrib: number;
       issueContrib: number;
@@ -484,6 +485,7 @@ export async function seedDatabase() {
       dimResults.push({
         dim,
         finalScore,
+        priorQuarterScore: 0,
         baselineContrib: baselineOnly,
         controlContrib: controlHealth * COMPONENT_WEIGHTS.controlHealth * DIMENSION_RELEVANCE.controlHealth[dim],
         issueContrib: auditIssueTrend * COMPONENT_WEIGHTS.auditIssueTrend * DIMENSION_RELEVANCE.auditIssueTrend[dim],
@@ -496,7 +498,22 @@ export async function seedDatabase() {
         maxDim = dim;
       }
 
-      const priorQuarterDampen = 0.85;
+      let nameHash = 0;
+      for (let ci = 0; ci < unitName.length; ci++) {
+        nameHash = ((nameHash << 5) - nameHash + unitName.charCodeAt(ci)) | 0;
+      }
+      const dimIdx = RISK_DIMENSIONS.indexOf(dim);
+      const seed = Math.abs(nameHash * 31 + dimIdx * 17) % 1000;
+
+      const controlSignal = (controlHealth - 50) / 50;
+      const issueSignal = (auditIssueTrend - 30) / 70;
+      const opRiskSignal = (operationalRisk - 30) / 70;
+      const trendBias = (-controlSignal * 0.5 + issueSignal * 0.25 + opRiskSignal * 0.25);
+
+      const jitter = ((seed % 300) - 150) / 300;
+      const rawDampen = 0.95 + trendBias * 0.25 + jitter;
+      const priorQuarterDampen = Math.max(0.70, Math.min(1.25, rawDampen));
+
       const priorQuarterScore = clamp(Math.round(
         computeFinalDimensionScore(
           dim,
@@ -507,6 +524,8 @@ export async function seedDatabase() {
           operationalRisk * priorQuarterDampen
         )
       ), 0, 100);
+
+      dimResults[dimResults.length - 1].priorQuarterScore = priorQuarterScore;
 
       const nonBaselineSignals = [controlHealth - 50, auditIssueTrend, businessExternal - 50, operationalRisk];
       const DECAY = 0.25;
@@ -546,18 +565,7 @@ export async function seedDatabase() {
     }
 
     const avgFinalScore = totalFinalScore / RISK_DIMENSIONS.length;
-    const avgPriorQuarter = dimResults.reduce((sum, d) => {
-      const pq = clamp(Math.round(
-        computeFinalDimensionScore(
-          d.dim, baselineDimScores[d.dim],
-          controlHealth * 0.85,
-          auditIssueTrend * 0.85,
-          businessExternal * 0.85 + 0.15 * 50,
-          operationalRisk * 0.85
-        )
-      ), 0, 100);
-      return sum + pq;
-    }, 0) / RISK_DIMENSIONS.length;
+    const avgPriorQuarter = dimResults.reduce((sum, d) => sum + d.priorQuarterScore, 0) / RISK_DIMENSIONS.length;
     const scoreChange = avgFinalScore - avgPriorQuarter;
     const absScoreChange = Math.abs(scoreChange);
 

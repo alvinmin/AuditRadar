@@ -37,10 +37,17 @@ const METRIC_TYPES = ["Financial", "Regulatory", "Operational", "Change", "Fraud
 
 function interpolateQuarterly(currentScore: number, previousScore: number): number[] {
   const diff = currentScore - previousScore;
+  const base = previousScore - diff * 0.6;
 
-  const q1_25 = previousScore - diff * 0.6;
-  const q2_25 = previousScore - diff * 0.3;
-  const q3_25 = previousScore - diff * 0.05;
+  const hashVal = Math.round((currentScore * 7 + previousScore * 13) * 100);
+  const noise = (qi: number) => {
+    const n = Math.abs(((hashVal * (qi + 1) * 37) % 200) - 100) / 100;
+    return (n - 0.5) * Math.abs(diff) * 0.4;
+  };
+
+  const q1_25 = base + noise(0);
+  const q2_25 = base + diff * 0.25 + noise(1);
+  const q3_25 = base + diff * 0.55 + noise(2);
   const q4_25 = previousScore;
   const q1_26 = currentScore;
 
