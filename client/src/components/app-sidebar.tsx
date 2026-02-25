@@ -11,7 +11,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, BarChart3, Bell, Settings, Activity, FileSearch, Crosshair, ListChecks } from "lucide-react";
+import { LayoutDashboard, Bell, Settings, Activity, FileSearch, Crosshair, ListChecks } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,6 @@ import auditRadarLogo from "@assets/Audit_Radar_Logo_1771881831743.png";
 const navItems = [
   { title: "Audit Radar", url: "/", icon: LayoutDashboard },
   { title: "Risk Quadrant", url: "/quadrant", icon: Crosshair },
-  { title: "Analytics", url: "/analytics", icon: BarChart3 },
   { title: "Alerts", url: "/alerts", icon: Bell },
   { title: "Score Drivers", url: "/drivers", icon: FileSearch },
   { title: "Recommendations", url: "/recommendations", icon: ListChecks },

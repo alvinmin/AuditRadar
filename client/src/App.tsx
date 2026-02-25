@@ -9,7 +9,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import QuadrantPage from "@/pages/quadrant-page";
-import AnalyticsPage from "@/pages/analytics-page";
 import AlertsPage from "@/pages/alerts-page";
 import DriversPage from "@/pages/drivers-page";
 import RecommendationsPage from "@/pages/recommendations-page";
@@ -20,7 +19,6 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/quadrant" component={QuadrantPage} />
-      <Route path="/analytics" component={AnalyticsPage} />
       <Route path="/alerts" component={AlertsPage} />
       <Route path="/drivers" component={DriversPage} />
       <Route path="/recommendations" component={RecommendationsPage} />
