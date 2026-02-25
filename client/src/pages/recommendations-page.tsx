@@ -3,8 +3,8 @@ import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ListChecks, Shield, ClipboardList, Globe, AlertTriangle, CheckCircle2 } from "lucide-react";
-import type { RiskSector } from "@shared/schema";
+import { ListChecks, Shield, ClipboardList, Globe, AlertTriangle, CheckCircle2, TrendingUp } from "lucide-react";
+import type { RiskSector, RiskMetric } from "@shared/schema";
 
 interface DimensionDriver {
   dimension: string;
@@ -99,21 +99,47 @@ export default function RecommendationsPage() {
     enabled: !!selectedSectorId,
   });
 
+  const { data: allMetrics = [] } = useQuery<RiskMetric[]>({
+    queryKey: ["/api/metrics"],
+    enabled: !!selectedSectorId,
+  });
+
+  const qoqChangeMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (!selectedSectorId || !allMetrics.length) return map;
+    for (const m of allMetrics) {
+      if (m.sectorId === selectedSectorId && m.previousScore != null) {
+        const change = m.previousScore > 0
+          ? ((m.score - m.previousScore) / m.previousScore) * 100
+          : 0;
+        map[m.metricType] = Math.round(change * 10) / 10;
+      }
+    }
+    return map;
+  }, [allMetrics, selectedSectorId]);
+
   const elevatedDimensions = useMemo(() => {
     if (!drivers) return [];
-    return drivers.dimensions.filter(d => d.adjustedScore > 60);
-  }, [drivers]);
+    return drivers.dimensions.filter(d => {
+      const qoqChange = qoqChangeMap[d.dimension] ?? 0;
+      return d.adjustedScore > 70 || qoqChange > 20;
+    });
+  }, [drivers, qoqChangeMap]);
 
   const thematicResults = useMemo(() => {
     if (!elevatedDimensions.length) return [];
     return THEMATIC_GROUPS.map(group => {
       const affectedDims = elevatedDimensions
         .filter(dim => !!(dim[group.actionKey as keyof DimensionDriver] as string))
-        .map(dim => ({ name: dim.dimension, score: dim.adjustedScore }))
+        .map(dim => ({
+          name: dim.dimension,
+          score: dim.adjustedScore,
+          qoqChange: qoqChangeMap[dim.dimension] ?? 0,
+        }))
         .sort((a, b) => b.score - a.score);
       return { ...group, affectedDims };
     }).filter(g => g.affectedDims.length > 0);
-  }, [elevatedDimensions]);
+  }, [elevatedDimensions, qoqChangeMap]);
 
   return (
     <div className="h-full overflow-auto">
@@ -121,7 +147,7 @@ export default function RecommendationsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">Recommendations</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Targeted actions for risk dimensions scoring above 60
+            Targeted actions for dimensions scoring above 70 or with QoQ change exceeding 20%
           </p>
         </div>
 
@@ -178,18 +204,22 @@ export default function RecommendationsPage() {
                 </div>
               </div>
               <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                <span>{elevatedDimensions.length} of {drivers.dimensions.length} dimensions above 60</span>
+                <span>{elevatedDimensions.length} of {drivers.dimensions.length} dimensions flagged</span>
                 <span>{thematicResults.length} recommendation theme{thematicResults.length !== 1 ? "s" : ""}</span>
               </div>
               {elevatedDimensions.length > 0 && (
                 <div className="flex gap-1.5 mt-2 flex-wrap">
                   {elevatedDimensions
                     .sort((a, b) => b.adjustedScore - a.adjustedScore)
-                    .map(d => (
-                      <Badge key={d.dimension} variant="outline" className={`text-[10px] px-1.5 py-0 ${getScoreColor(d.adjustedScore)}`}>
-                        {d.dimension}: {d.adjustedScore}
-                      </Badge>
-                    ))}
+                    .map(d => {
+                      const qoq = qoqChangeMap[d.dimension] ?? 0;
+                      return (
+                        <Badge key={d.dimension} variant="outline" className={`text-[10px] px-1.5 py-0 ${getScoreColor(d.adjustedScore)}`}>
+                          {d.dimension}: {d.adjustedScore}
+                          {qoq > 20 && <TrendingUp className="inline w-2.5 h-2.5 ml-0.5" />}
+                        </Badge>
+                      );
+                    })}
                 </div>
               )}
             </Card>
@@ -199,7 +229,7 @@ export default function RecommendationsPage() {
                 <CheckCircle2 className="w-12 h-12 text-green-500/40 mb-3" />
                 <h3 className="text-sm font-medium text-green-600">No Elevated Risk Dimensions</h3>
                 <p className="text-xs text-muted-foreground/70 mt-1">
-                  All risk dimensions for this unit score at or below 60 — no targeted recommendations needed.
+                  All dimensions score at or below 70 with no QoQ change exceeding 20% — no targeted recommendations needed.
                 </p>
               </Card>
             )}
@@ -223,6 +253,7 @@ export default function RecommendationsPage() {
                       {group.affectedDims.map(d => (
                         <Badge key={d.name} variant="outline" className={`text-[10px] px-1.5 py-0 ${getScoreColor(d.score)}`}>
                           {d.name} ({d.score})
+                          {d.qoqChange > 20 && <TrendingUp className="inline w-2.5 h-2.5 ml-0.5" />}
                         </Badge>
                       ))}
                     </div>
