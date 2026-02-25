@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertTriangle, TrendingUp, TrendingDown, Minus, FileText, Shield, Newspaper, ChevronRight, CheckCircle, ClipboardList } from "lucide-react";
+import { AlertTriangle, TrendingUp, TrendingDown, Minus, FileText, Shield, Newspaper, ChevronRight, CheckCircle, ClipboardList, ListChecks } from "lucide-react";
 import {
   ResponsiveContainer,
   RadarChart,
@@ -652,6 +652,49 @@ export default function DriversPage() {
               })}
             </div>
 
+            <Card className="p-4" data-testid="card-key-recommendations">
+              <div className="flex items-center gap-2 mb-3">
+                <ListChecks className="w-4 h-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">Key Recommendations</h3>
+              </div>
+              <div className="space-y-2">
+                {(() => {
+                  const ACTION_KEYS = [
+                    { actionKey: "controlHealthAction" as const, label: "Control Health", color: "bg-purple-500", textColor: "text-purple-600", borderColor: "border-purple-500/15", bgColor: "bg-purple-500/5" },
+                    { actionKey: "auditIssueAction" as const, label: "Issue Trend", color: "bg-amber-500", textColor: "text-amber-600", borderColor: "border-amber-500/15", bgColor: "bg-amber-500/5" },
+                    { actionKey: "businessExternalAction" as const, label: "Business/External", color: "bg-blue-500", textColor: "text-blue-600", borderColor: "border-blue-500/15", bgColor: "bg-blue-500/5" },
+                    { actionKey: "operationalRiskAction" as const, label: "Operational Risk", color: "bg-red-500", textColor: "text-red-600", borderColor: "border-red-500/15", bgColor: "bg-red-500/5" },
+                  ];
+                  const seen = new Set<string>();
+                  const items: { label: string; action: string; dims: string[]; textColor: string; borderColor: string; bgColor: string; color: string }[] = [];
+                  for (const ak of ACTION_KEYS) {
+                    for (const dim of drivers.dimensions) {
+                      const action = dim[ak.actionKey as keyof DimensionDriver] as string;
+                      if (action && !seen.has(`${ak.actionKey}-${action}`)) {
+                        seen.add(`${ak.actionKey}-${action}`);
+                        const dims = drivers.dimensions.filter(d => (d[ak.actionKey as keyof DimensionDriver] as string) === action).map(d => d.dimension);
+                        items.push({ label: ak.label, action, dims, textColor: ak.textColor, borderColor: ak.borderColor, bgColor: ak.bgColor, color: ak.color });
+                      }
+                    }
+                  }
+                  if (items.length === 0) return <p className="text-xs text-muted-foreground italic">No specific recommendations for this unit.</p>;
+                  return items.map((item, i) => (
+                    <div key={i} className={`flex items-start gap-2 p-2.5 rounded-md border ${item.borderColor} ${item.bgColor}`}>
+                      <ChevronRight className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${item.textColor}`} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                          <div className={`w-2 h-2 rounded-full ${item.color}`} />
+                          <span className="text-[10px] font-semibold uppercase tracking-wide">{item.label}</span>
+                          <span className="text-[10px] text-muted-foreground">({item.dims.join(", ")})</span>
+                        </div>
+                        <p className={`text-xs ${item.textColor} dark:opacity-90`}>{item.action}</p>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </Card>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <RiskRadarChart
                 dimensions={drivers.dimensions}
@@ -726,6 +769,25 @@ export default function DriversPage() {
                           );
                         })}
                       </div>
+                      {(() => {
+                        const actions = [
+                          { action: dim.controlHealthAction, color: "text-purple-500" },
+                          { action: dim.auditIssueAction, color: "text-amber-500" },
+                          { action: dim.businessExternalAction, color: "text-blue-500" },
+                          { action: dim.operationalRiskAction, color: "text-red-500" },
+                        ].filter(a => a.action);
+                        if (actions.length === 0) return null;
+                        return (
+                          <div className="mt-2 pt-2 border-t space-y-1">
+                            {actions.map((a, i) => (
+                              <div key={i} className="flex items-start gap-1.5">
+                                <ChevronRight className={`w-3 h-3 mt-0.5 shrink-0 ${a.color}`} />
+                                <p className="text-[10px] text-muted-foreground leading-tight line-clamp-1">{a.action}</p>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </Card>
                   ))}
               </div>

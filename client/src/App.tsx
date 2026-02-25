@@ -12,6 +12,7 @@ import QuadrantPage from "@/pages/quadrant-page";
 import AnalyticsPage from "@/pages/analytics-page";
 import AlertsPage from "@/pages/alerts-page";
 import DriversPage from "@/pages/drivers-page";
+import RecommendationsPage from "@/pages/recommendations-page";
 import StatusPage from "@/pages/status-page";
 
 function Router() {
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/analytics" component={AnalyticsPage} />
       <Route path="/alerts" component={AlertsPage} />
       <Route path="/drivers" component={DriversPage} />
+      <Route path="/recommendations" component={RecommendationsPage} />
       <Route path="/status" component={StatusPage} />
       <Route component={NotFound} />
     </Switch>
