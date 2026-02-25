@@ -142,23 +142,27 @@ export default function StatusPage() {
             <div className="space-y-3 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Algorithm</span>
-                <span className="font-medium">Multi-source Weighted Aggregation</span>
+                <span className="font-medium">5-Component Predictive Scoring Model</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Prediction Model</span>
-                <span className="font-medium">Weighted Momentum (decay: 0.3)</span>
+                <span className="text-muted-foreground">Component Weights</span>
+                <span className="font-medium text-xs">QRA 30% | Control 25% | Issues 20% | Biz/Ext 15% | OpRisk 10%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">QoQ Comparison</span>
+                <span className="font-medium">Q4 2025 → Q1 2026</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Risk Dimensions</span>
-                <span className="font-medium">{dimensions.length} active</span>
+                <span className="font-medium">{dimensions.length} active (7×7 relevance matrix)</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Average Risk Score</span>
                 <span className="font-bold">{avgScore}/100</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Sector Categories</span>
-                <span className="font-medium">{categories.length} categories</span>
+                <span className="text-muted-foreground">Auditable Units</span>
+                <span className="font-medium">{sectors.length} units across {categories.length} categories</span>
               </div>
             </div>
           </Card>
@@ -186,8 +190,8 @@ export default function StatusPage() {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Momentum Weights</span>
-                <span className="font-medium text-xs">News ×1.5 | Cyber ×1.3 | Reg ×1.2 | Inc ×0.8</span>
+                <span className="text-muted-foreground">Prediction</span>
+                <span className="font-medium text-xs">Momentum-based: Ctrl ×1.2 | Issues ×1.4 | Biz/Ext ×1.5 | OpRisk ×1.3</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Dimensions</span>
@@ -208,12 +212,14 @@ export default function StatusPage() {
           </div>
           <div className="space-y-2">
             {[
-              { name: "Internal Audit Universe", file: "Internal_Audit_Universe_Auto_Scoring.xlsm", desc: "28 auditable units with base risk scores (1-5 scale)" },
-              { name: "IT Incident Data", file: "Incident_data.xlsx", desc: "100 IT incidents with severity/priority mappings" },
-              { name: "Regulatory Inputs", file: "Reg_inputs.xlsx", desc: "6 SEC/EU regulatory changes with directional impact" },
-              { name: "Market News Articles", file: "Predictive_Audit_Market_News.xlsx (Sheet2)", desc: "20 articles with algorithmically derived sentiment" },
-              { name: "Vendor Mappings", file: "Auditable_Units_Tech_Vendors_v2.xlsx", desc: "28 auditable units mapped to ~5 technology vendors each" },
-              { name: "Known Exploited Vulnerabilities", file: "known_exploited_vulnerabilities.xlsx", desc: "1,526 CVEs with ransomware flags matched to unit vendors" },
+              { name: "Internal Audit Universe", file: "Internal_Audit_Universe_Auto_Scoring.xlsm", desc: "28 auditable units with 7 risk dimensions (1-5 scale) → Component 1: Qualitative Risk Assessment (30%)" },
+              { name: "PRC Controls", file: "PRC_updated.xlsx", desc: "~200 controls with design & operating effectiveness → Component 2: Control Health Score (25%)" },
+              { name: "Audit Issues", file: "Issue_details_no_quarter.xlsx", desc: "~999 issues with severity/status weighting → Component 3: Audit & Issue Trend Score (20%)" },
+              { name: "Market News Articles", file: "Predictive_Audit_Market_News.xlsx (Sheet2)", desc: "20 articles with sentiment analysis → Component 4: Business & External Risk (15%)" },
+              { name: "Regulatory Inputs", file: "Reg_inputs.xlsx", desc: "6 SEC/EU regulatory changes with directional impact → Component 4: Business & External Risk (15%)" },
+              { name: "IT Incident Data", file: "Incident_data.xlsx", desc: "100 IT incidents with severity/priority mappings → Component 5: Operational Risk (10%)" },
+              { name: "Predictive Heatmap Dataset", file: "predictive_heatmap_dataset.xlsx", desc: "28 units with pre-computed operational metrics & predictive scores → Component 5: Operational Risk (10%)" },
+              { name: "Vendor–CVE Mappings", file: "Auditable_Units_Tech_Vendors_v2.xlsx + known_exploited_vulnerabilities.xlsx", desc: "28 units mapped to vendors; 1,526 CVEs with fuzzy matching → Component 5: Operational Risk (10%)" },
             ].map((src) => (
               <div key={src.name} className="flex items-center gap-3 p-2 rounded-md bg-muted/30 text-sm">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
