@@ -31,9 +31,10 @@ const THEMATIC_GROUPS = [
     summary: "Review and remediate controls with design or operating effectiveness gaps. Prioritize financial, regulatory, and IT controls where weaknesses could compound risk. Ensure compensating controls are in place for fraud and change management processes, and strengthen governance to prevent reputational incidents.",
     actionKey: "controlHealthAction" as const,
     icon: Shield,
-    textColor: "text-purple-600",
-    borderColor: "border-purple-500/15",
-    bgColor: "bg-purple-500/5",
+    accentColor: "text-purple-600 dark:text-purple-400",
+    borderColor: "border-purple-500/30",
+    accentBorder: "border-l-purple-500",
+    bgColor: "bg-purple-500/8",
   },
   {
     key: "audit",
@@ -41,9 +42,10 @@ const THEMATIC_GROUPS = [
     summary: "Accelerate closure of open audit issues, particularly those rated severe or high. Focus on regulatory compliance findings with approaching deadlines, IT governance and access control issues, and operational findings contributing to elevated risk. Ensure remediation tracking is in place and escalate unresolved items.",
     actionKey: "auditIssueAction" as const,
     icon: ClipboardList,
-    textColor: "text-amber-600",
-    borderColor: "border-amber-500/15",
-    bgColor: "bg-amber-500/5",
+    accentColor: "text-amber-600 dark:text-amber-400",
+    borderColor: "border-amber-500/30",
+    accentBorder: "border-l-amber-500",
+    bgColor: "bg-amber-500/8",
   },
   {
     key: "external",
@@ -51,9 +53,10 @@ const THEMATIC_GROUPS = [
     summary: "Track emerging regulatory trends and prepare proactive responses. Monitor market conditions and media sentiment for signals that may affect financial, operational, or reputational risk. Evaluate whether current change initiatives adequately address newly identified external risks.",
     actionKey: "businessExternalAction" as const,
     icon: Globe,
-    textColor: "text-blue-600",
-    borderColor: "border-blue-500/15",
-    bgColor: "bg-blue-500/5",
+    accentColor: "text-blue-600 dark:text-blue-400",
+    borderColor: "border-blue-500/30",
+    accentBorder: "border-l-blue-500",
+    bgColor: "bg-blue-500/8",
   },
   {
     key: "technology",
@@ -61,9 +64,10 @@ const THEMATIC_GROUPS = [
     summary: "Conduct vulnerability assessments on vendor products with known exploits and accelerate patching cycles. Review vendor SLAs and incident response capabilities for critical dependencies. Verify vendor compliance with cybersecurity regulatory requirements and assess financial exposure from technology-related risks.",
     actionKey: "operationalRiskAction" as const,
     icon: AlertTriangle,
-    textColor: "text-red-600",
-    borderColor: "border-red-500/15",
-    bgColor: "bg-red-500/5",
+    accentColor: "text-red-600 dark:text-red-400",
+    borderColor: "border-red-500/30",
+    accentBorder: "border-l-red-500",
+    bgColor: "bg-red-500/8",
   },
 ];
 
@@ -206,14 +210,14 @@ export default function RecommendationsPage() {
                 <Card key={group.key} className="p-4" data-testid={`card-theme-${group.key}`}>
                   <div className="flex items-start gap-3 mb-3">
                     <div className={`p-2 rounded-lg ${group.bgColor} shrink-0`}>
-                      <Icon className={`w-4 h-4 ${group.textColor}`} />
+                      <Icon className={`w-4 h-4 ${group.accentColor}`} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold">{group.title}</h3>
+                      <h3 className={`text-sm font-semibold ${group.accentColor}`}>{group.title}</h3>
                     </div>
                   </div>
-                  <div className={`p-3 rounded-md border ${group.borderColor} ${group.bgColor}`}>
-                    <p className={`text-sm leading-relaxed ${group.textColor} dark:opacity-90`}>{group.summary}</p>
+                  <div className={`p-3 rounded-md border border-l-4 ${group.borderColor} ${group.accentBorder} ${group.bgColor}`}>
+                    <p className="text-sm leading-relaxed text-foreground/85">{group.summary}</p>
                     <div className="flex items-center gap-1.5 mt-3 flex-wrap">
                       <span className="text-[10px] text-muted-foreground uppercase tracking-wide mr-1">Affected:</span>
                       {group.affectedDims.map(d => (
