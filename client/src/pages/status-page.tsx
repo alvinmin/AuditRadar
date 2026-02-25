@@ -190,10 +190,6 @@ export default function StatusPage() {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Prediction</span>
-                <span className="font-medium text-xs">Momentum-based: Ctrl ×1.2 | Issues ×1.4 | Biz/Ext ×1.5 | OpRisk ×1.3</span>
-              </div>
-              <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Dimensions</span>
                 <div className="flex gap-1 flex-wrap justify-end">
                   {dimensions.map(d => (
